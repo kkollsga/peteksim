@@ -25,3 +25,5 @@ crates/srs-py/python/peteksim/_core*.so
 # macOS
 .DS_Store
 **/.DS_Store
+dist/
+dist-launch/
