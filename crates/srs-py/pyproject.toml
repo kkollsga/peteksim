@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "peteksim"
 description = "petekSim — fast field/discovery appraisal toolkit (Rust core, Python API): the facade over the petek subsurface-modelling stack."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "BUSL-1.1" }
 authors = [{ name = "Kristian dF Kollsgård", email = "kkollsg@gmail.com" }]
 keywords = ["reservoir", "appraisal", "subsurface", "volumetrics", "simulation"]
