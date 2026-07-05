@@ -553,7 +553,7 @@ fn positioned_logs(
         let mds = view.md();
         let vals = view.values();
         // The net mask: the bore's positioned NTG curve (where present) + cutoff.
-        let net = net_cutoff.and_then(|cut| bw.log("NTG").map(|ntg| (cut, ntg)));
+        let net = net_cutoff.zip(bw.log("NTG"));
         let mut samples = Vec::new();
         // Accumulate the samples' own areal positions: on a deviated bore the
         // logged reservoir section is laterally offset from the wellhead, so the

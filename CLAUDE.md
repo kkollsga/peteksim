@@ -8,7 +8,7 @@ library's slice of it. petekSim is a peer library; the coordinator is petekSuite
 **Identity (graph `decision_layer_charters`, 2026-07-03): dynamic/engineering
 simulation + THE product.** The engineering core is recoverable/forecast work
 (decline, p/z, Havlena-Odeh, Ramagost-Farshad; later full dynamic flow) plus
-PVT (`srs-pvt`); the product is the **`peteksim` wheel** — the single
+PVT (the `pvt` module); the product is the **`peteksim` wheel** — the single
 Python-facing facade over the whole DAG-downward stack. Volumetrics + static
 uncertainty (GRV/in-place, MC over static-model realizations, tornado) are
 **petekStatic's** — this library consumes those results across the seam and
@@ -33,41 +33,43 @@ always the same: split it up. Maintainability and flexibility come first.
   core exports a render bundle (mesh + summary) that a small three.js viewer
   (shipped inside the `peteksim` package) renders in the browser.
 
-## Structure — a Cargo workspace of small, single-responsibility crates
+## Structure — one consolidated library crate + the py binding
 
 petekSim is the **dynamic-simulation / product** layer of the petek suite.
 Dependencies flow one direction, downward only — petekIO → petekStatic →
 petekSim, with petekTools as the horizontal toolkit. The geomodel crates were
-**extracted to petekStatic on 2026-07-01**; **srs-volumetrics + srs-uncertainty
-followed in the 2026-07-03 static lift** (with the `RefiningModel`
-structural/population half, now petekStatic's `srs-model`); petekSim consumes
-them all across the repo seam via path deps (no cycles).
+**extracted to petekStatic on 2026-07-01** (the static-uncertainty pieces
+followed in the 2026-07-03 static lift), and the remaining local crates were
+**consolidated into a single `peteksim` crate at the repo root** — the former
+crates live on as modules.
 
-**Local crates (this workspace, 4):**
-
-```
-srs-units         # the workspace error type (SrsError)
-srs-pvt           # PVT correlations and FVF handling (the dynamic/engineering core's)
-srs-core          # facade orchestration: the analytic box path (run_box_model),
-                  #   the thin RefiningModel facade over petekStatic's srs-model,
-                  #   distribution_of (petekio DTO -> sampler), model.view()
-srs-py            # PyO3/maturin bindings + the three.js viewer (package data)
-```
-
-**Consumed across the seam (deps, not built here):**
+**This workspace (root crate + 1 member):**
 
 ```
-../petekStatic/crates/*   # geomodel + static-uncertainty layer, path deps:
-                          #   srs-grid · srs-gridder · srs-wireframe · srs-petro ·
-                          #   srs-data · srs-volumetrics · srs-uncertainty ·
-                          #   srs-model · petekstatic-error
-                          #   (petekstatic-error composes into SrsError via #[from];
-                          #    it reaches petekio::GeoError transitively)
-../petekTools             # petektools, path dep: numeric kernels + units —
-                          #   the horizontal toolkit, downstream DAG leaf
-petekio = "0.2.1"         # published DATA layer: srs-core names its neutral
-                          #   Distribution DTO in distribution_of
+peteksim (root)   # the consolidated library crate
+  src/units       #   the error type (SrsError; family errors compose in via #[from])
+  src/pvt         #   PVT correlations and FVF handling (the dynamic/engineering core's)
+  src/core        #   facade orchestration: the analytic box path (run_box_model),
+                  #     the thin RefiningModel facade over petekstatic's model,
+                  #     distribution_of (petekio DTO -> sampler), model.view(), charts
+crates/srs-py     # PyO3/maturin bindings + the pure-Python `peteksim` package
+                  #   (viewer glue over petektools.viewer, synth_asset)
 ```
+
+**Consumed across the seam (published family deps, from crates.io):**
+
+```
+petekstatic       # GEOMODEL layer: structural framework + grid + property modelling +
+                  #   volumetrics/static uncertainty; its StaticError composes into
+                  #   SrsError via #[from] (reaches petekio::GeoError transitively)
+petektools        # horizontal TOOLKIT: numeric kernels + units + the viewer unit
+                  #   (also a runtime dep of the wheel: petektools>=0.2.1 on PyPI)
+petekio           # DATA layer: names its neutral Distribution DTO in distribution_of
+```
+
+Version pins live in the root `Cargo.toml` `[workspace.dependencies]`. To develop
+against a sibling checkout, patch locally in a gitignored `.cargo/config.toml`
+(`[patch.crates-io]`) — no tracked path deps, no cycles.
 
 ## Component rules (how we split the elephant)
 

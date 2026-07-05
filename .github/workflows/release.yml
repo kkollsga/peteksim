@@ -21,8 +21,27 @@ permissions:
   contents: read
 
 jobs:
+  # Release gate: the same fmt/clippy/test bar as CI must be green before any
+  # build or publish job runs. CI failures block releases — by construction.
+  gates:
+    name: gates (fmt / clippy / test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy (warnings = errors)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: test
+        run: cargo test --workspace
+
   sdist:
     name: build sdist
+    needs: gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +57,7 @@ jobs:
 
   wheels:
     name: build wheels ${{ matrix.runner }} ${{ matrix.target }}
+    needs: gates
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -63,7 +83,7 @@ jobs:
 
   publish-pypi:
     name: PyPI (trusted publishing)
-    needs: [sdist, wheels]
+    needs: [gates, sdist, wheels]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
