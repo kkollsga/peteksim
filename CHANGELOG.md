@@ -6,7 +6,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed — packaging (internal, behaviour-neutral)
+
+- **Consolidated the three published library crates into one.** `srs-units`,
+  `srs-pvt` and `srs-core` were merged into a single crate, **`peteksim`**
+  (0.1.0), at the repo root. Their boundaries are preserved as modules —
+  `peteksim::{units, pvt, core}` — and the headline Rust API (`run_model`, the
+  appraisal facade types, the `Distribution` seam, the view bundles) is
+  re-exported at the crate root. File moves + mechanical path rewrites only; no
+  logic changed. The workspace keeps its `crates/srs-py` member (the `peteksim`
+  wheel source), which now binds the `peteksim` crate; the published PyPI wheel
+  surface (`peteksim`) is unchanged.
+- **Repointed the geomodel dependency at petekStatic's consolidated crate.** The
+  former per-crate path deps on petekStatic's `srs-*` crates are now a single
+  `petekstatic = "0.1.0"` (path `../petekStatic`); the `srs_model::` /
+  `srs_grid::` / `srs_wireframe::` (…) imports rewrote to
+  `petekstatic::{model, grid, wireframe, …}::`. petekio / petekTools pins
+  unchanged.
 
 ## [0.1.0] - 2026-07-05
 

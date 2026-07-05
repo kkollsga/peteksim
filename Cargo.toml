@@ -1,9 +1,45 @@
+[package]
+name = "peteksim"
+description = "petekSim — the SIMULATION layer: dynamic/engineering appraisal (recoverable/forecast) + PVT + the appraisal facade over the petek subsurface-modelling stack, consolidated into one crate."
+keywords = ["reservoir", "appraisal", "subsurface", "simulation", "volumetrics"]
+categories = ["science", "simulation"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+# The published crate ships no test/example data (house rule).
+exclude = ["/tests", "/examples", "/dev-docs", "/inbox", "/docs", "/notes", "/research", "/tools", "/crates"]
+
+[lints]
+workspace = true
+
+[dependencies]
+# petekSim's single error type (SrsError): petekStatic's StaticError, petekio's
+# GeoError and petekTools' AlgoError compose into it via #[from] so `?` chains
+# across the layer seams in one hop.
+thiserror.workspace = true
+# CROSS-REPO family deps: the DATA layer (petekio), the horizontal TOOLKIT
+# (petektools), and the GEOMODEL layer (petekstatic). One-directional DAG edges.
+petekio.workspace = true
+petektools.workspace = true
+petekstatic.workspace = true
+# Config-layer serde: the facade specs + the analytics chart bundles round-trip.
+serde.workspace = true
+# The view bundles + the wells_logs base64 blocks + the box-model JSON payloads.
+serde_json = "1"
+# The wells_logs bundle encodes each numeric lane as a base64 f32 block — the same
+# wire petekStatic's volume blocks use, so the viewer decodes them on one path.
+base64 = "0.22"
+# The zoned-MC driver samples per-zone draws on ONE seeded stream and shards the
+# realize loop across template clones — the same rand (0.10) + rayon petekStatic
+# uses at the seam, so the RNG is one type across the layer boundary.
+rand = "0.10"
+rayon = "1"
+
 [workspace]
 resolver = "2"
 members = [
-    "crates/srs-units",
-    "crates/srs-pvt",
-    "crates/srs-core",
     "crates/srs-py",
 ]
 
@@ -18,38 +54,21 @@ repository = "https://github.com/kkollsga/peteksim"
 rust-version = "1.80"
 
 [workspace.dependencies]
-# INTERNAL workspace crates: `{ path, version }` — path drives LOCAL builds, the
-# version pin is written into the published manifest. Published together, in order.
-srs-units = { path = "crates/srs-units", version = "0.1.0" }
-srs-pvt = { path = "crates/srs-pvt", version = "0.1.0" }
-srs-core = { path = "crates/srs-core", version = "0.1.0" }
-# CROSS-REPO family deps: resolved from crates.io (the family is published; the
-# dev-only [patch.crates-io] was removed at launch).
-# petekTools (pure-leaf toolkit, downstream DAG edge): numeric kernels + units.
+# The consolidated library crate (the py binding crate depends on it).
+peteksim = { path = ".", version = "0.1.0" }
+# CROSS-REPO family deps.
+# petekStatic (GEOMODEL layer, downstream DAG edge): the consolidated geomodel +
+# static-uncertainty crate, consumed across the repo seam via `../petekStatic`.
+# petekstatic::error::StaticError composes into SrsError via #[from].
+petekstatic = { version = "0.1.0", path = "../petekStatic" }
+# petekTools (pure-leaf toolkit, downstream DAG edge): numeric kernels + units +
+# the viewer unit. Resolved from crates.io.
 petektools = "0.2.0"
-# petekStatic (GEOMODEL layer, downstream DAG edge): the geomodel + static-
-# uncertainty crates consumed across the repo seam. petekstatic-error composes
-# into SrsError via #[from] so `?` works across the seam.
-srs-grid = "0.1.0"
-srs-gridder = "0.1.0"
-srs-petro = "0.1.0"
-srs-wireframe = "0.1.0"
-# srs-data: the petekio→wireframe ingest adapter. Carries petekio's neutral
-# Distribution DTO; the DTO→sampler mapping (distribution_of) lives in srs-core.
-srs-data = "0.1.0"
-petekstatic-error = "0.1.0"
-# srs-volumetrics + srs-uncertainty (GEOMODEL layer): volumetrics + MC-over-
-# realizations. FVF is a validated scalar owned by srs-volumetrics; srs-pvt keeps
-# its own copy for the dynamic work.
-srs-volumetrics = "0.1.0"
-srs-uncertainty = "0.1.0"
-# srs-model: the StaticModel aggregate + regeneration seam. srs-core's refine
-# facade delegates the geomodel build here and applies the FVF tail on its volumes.
-srs-model = "0.1.0"
-# petekio (DATA layer): srs-core names petekio's neutral Distribution DTO in
-# `distribution_of` (the lifted DTO→sampler mapping). Same one srs-data uses.
+# petekio (DATA layer): its neutral Distribution DTO is the input of the lifted
+# `distribution_of` (DTO→sampler) mapping. Resolved from crates.io.
 petekio = "0.3.0"
 thiserror = "2"
+serde = { version = "1", features = ["derive"] }
 
 # Warnings are errors (CLAUDE.md gate). Applied per-crate via `[lints] workspace = true`.
 [workspace.lints.rust]

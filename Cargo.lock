@@ -742,13 +742,33 @@ dependencies = [
 ]
 
 [[package]]
-name = "petekstatic-error"
+name = "peteksim"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9a056bcdceeadb456b5efc6a73b74db19467cd0c860b0562eae61e4a6dc8fd4"
 dependencies = [
+ "base64",
+ "petekio",
+ "petekstatic",
+ "petektools",
+ "rand 0.10.1",
+ "rayon",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "petekstatic"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "ndarray",
  "petekio",
  "petektools",
+ "rand 0.10.1",
+ "rayon",
+ "serde",
+ "serde_json",
+ "static_assertions",
  "thiserror 2.0.18",
 ]
 
@@ -1235,163 +1255,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "srs-core"
-version = "0.1.0"
-dependencies = [
- "base64",
- "petekio",
- "petektools",
- "rand 0.10.1",
- "rayon",
- "serde",
- "serde_json",
- "srs-data",
- "srs-grid",
- "srs-gridder",
- "srs-model",
- "srs-uncertainty",
- "srs-units",
- "srs-volumetrics",
- "srs-wireframe",
-]
-
-[[package]]
-name = "srs-data"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d655df389267521f26fbce633e2664c7c78cd603b88fbede0ec7f343e8eb89e"
-dependencies = [
- "petekio",
- "petekstatic-error",
- "petektools",
- "srs-wireframe",
-]
-
-[[package]]
-name = "srs-grid"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c00c0985bbb80351007eb01a572e334ba37588d5161dbe3049303bd8451c086a"
-dependencies = [
- "petekstatic-error",
- "petektools",
-]
-
-[[package]]
-name = "srs-gridder"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "138d4e0c379e9b4198fe9a8d99bdf1dfbac49b22646ba297788c2107f5877a01"
-dependencies = [
- "ndarray",
- "petekstatic-error",
- "petektools",
- "serde",
- "srs-grid",
-]
-
-[[package]]
-name = "srs-model"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3aae52c4e9940e414744a41560486f4f8cd07d79be7f691c9cbc12a14970df4"
-dependencies = [
- "base64",
- "ndarray",
- "petekstatic-error",
- "petektools",
- "rand 0.10.1",
- "rayon",
- "serde",
- "serde_json",
- "srs-grid",
- "srs-gridder",
- "srs-petro",
- "srs-spill",
- "srs-uncertainty",
- "srs-volumetrics",
- "srs-wireframe",
- "static_assertions",
-]
-
-[[package]]
-name = "srs-petro"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ad7fa2e5650443809a25a718e456b03f9f7bba61c0ab95dafe32e6e9e644917"
-dependencies = [
- "petekstatic-error",
-]
-
-[[package]]
-name = "srs-pvt"
-version = "0.1.0"
-dependencies = [
- "srs-units",
-]
-
-[[package]]
 name = "srs-py"
 version = "0.1.0"
 dependencies = [
+ "peteksim",
  "pyo3",
  "serde",
  "serde_json",
- "srs-core",
-]
-
-[[package]]
-name = "srs-spill"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b706465a78f1b1f28292d35f3d277b07467a5c66e1a3d3fd74e6281219596faf"
-dependencies = [
- "petekstatic-error",
- "petektools",
- "serde_json",
- "srs-grid",
- "srs-volumetrics",
-]
-
-[[package]]
-name = "srs-uncertainty"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a53d23595e6324cbca0ff0f7cd45e6d2628302ff4f4684f4de1f4d96c7ba330e"
-dependencies = [
- "petekstatic-error",
- "petektools",
-]
-
-[[package]]
-name = "srs-units"
-version = "0.1.0"
-dependencies = [
- "petekio",
- "petekstatic-error",
- "petektools",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "srs-volumetrics"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc0386b73b2a60c521f085119ac6bac7f95af3a127eef3e583acf0404c71b84b"
-dependencies = [
- "petekstatic-error",
- "petektools",
- "serde",
- "srs-grid",
-]
-
-[[package]]
-name = "srs-wireframe"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0710f0a38f6adf0d15a4994c49d7842a7ef85cdf088083a5f6e03e1f131efbf"
-dependencies = [
- "serde",
 ]
 
 [[package]]

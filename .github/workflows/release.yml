@@ -2,15 +2,16 @@ name: Release
 
 # Tag-triggered PyPI publish (v* tags) via OIDC trusted publishing — no secret.
 # The `peteksim` wheel is built from crates/srs-py (its pyproject.toml). The
-# crates.io publish of the srs-units/srs-pvt/srs-core library crates is done from
-# the local runbook (ordered, cross-repo deps), not here.
+# crates.io publish of the consolidated `peteksim` library crate is done from the
+# local runbook (ordered, cross-repo deps), not here.
 #
 # Configure a pending publisher on PyPI: project `peteksim`, owner kkollsga, repo
 # peteksim, workflow release.yml, environment pypi.
 #
-# NOTE: before pushing a v* tag, remove the root Cargo.toml [patch.crates-io]
-# section — its sibling paths don't exist on the CI runner, and by release time
-# the upstream family crates are on crates.io so the registry pins resolve.
+# NOTE: before pushing a v* tag, the sibling path dep on `petekstatic`
+# (`../petekStatic` in the root Cargo.toml [workspace.dependencies]) must resolve
+# from crates.io — its version pin (0.1.0) does; by release time the upstream
+# family crates are all published so the registry pins resolve on the CI runner.
 on:
   push:
     tags: ["v*"]

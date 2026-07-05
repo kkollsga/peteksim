@@ -1,4 +1,4 @@
-//! Thin PyO3 bindings over `srs-core` — the published `peteksim` Python
+//! Thin PyO3 bindings over the `peteksim` crate — the published `peteksim` Python
 //! module. Code-first: build a model in Python, then `model.view()` / `save_view`
 //! open the bundle-driven viewer (map + intersection + volume). The renderer is
 //! petekTools' horizontal `petektools.viewer` unit (owner ruling); the thin
@@ -15,13 +15,13 @@
 mod facade;
 mod viewer;
 
-use pyo3::exceptions::{PyIOError, PyValueError};
-use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyTuple};
-use srs_core::{
+use peteksim::{
     box_static_model, km2_to_m2, run_model, scale_area_km2_to_m2, ConstantPriors, Dims,
     Distribution, Fluid, ModelInputs, RefiningModel, StaticModel, SM3_PER_BCM, SM3_PER_MSM3,
 };
+use pyo3::exceptions::{PyIOError, PyValueError};
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyTuple};
 use std::collections::HashMap;
 use std::fs::File;
 
@@ -160,7 +160,7 @@ fn parse_fluid(fluid: &str) -> PyResult<Fluid> {
     }
 }
 
-fn map_err(e: srs_core::SrsError) -> PyErr {
+fn map_err(e: peteksim::SrsError) -> PyErr {
     PyValueError::new_err(e.to_string())
 }
 
@@ -397,7 +397,7 @@ fn run_box_model(
         .detach(|| {
             let r = run_model(&inputs, realizations, seed)?;
             let model = box_static_model(&inputs)?;
-            Ok::<_, srs_core::SrsError>((r, model))
+            Ok::<_, peteksim::SrsError>((r, model))
         })
         .map_err(map_err)?;
     Ok(PyModelResult {
@@ -665,14 +665,14 @@ fn version() -> &'static str {
 
 /// petekStatic's in-core **live-set estimate** (bytes) for an `ni×nj×nk` grid with
 /// `n_cubes` property cubes — the single home of the memory-budget formula
-/// (`srs_model::live_set_bytes`: ZCORN + cubes, scaled by petekStatic's
+/// (`peteksim::live_set_bytes`: ZCORN + cubes, scaled by petekStatic's
 /// `WARM_FACTOR`). Exposed so the Python spill-forcing recipe reads the formula
 /// **across the seam** instead of re-deriving petekStatic's `WARM_FACTOR`/
 /// `ELEM_BYTES` constants (which would drift silently if petekStatic changed them).
 #[pyfunction]
 fn live_set_bytes(ni: usize, nj: usize, nk: usize, n_cubes: usize) -> PyResult<u64> {
     let dims = Dims::new(ni, nj, nk).map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(srs_core::live_set_bytes(dims, n_cubes))
+    Ok(peteksim::live_set_bytes(dims, n_cubes))
 }
 
 #[pymodule]

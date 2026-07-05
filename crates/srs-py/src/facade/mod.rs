@@ -1,7 +1,7 @@
 //! PyO3 marshalling for the staged model-build facade (`Project.load` → …
-//! `model.uncertainty`). Every class here holds an `srs_core::facade` type and
+//! `model.uncertainty`). Every class here holds an `peteksim::facade` type and
 //! only marshals across the boundary; the orchestration + all seam calls live in
-//! `srs-core`. Units are SI (area m²/km², depths m positive-down, results Sm³).
+//! the `peteksim` crate. Units are SI (area m²/km², depths m positive-down, results Sm³).
 //!
 //! Split by domain into submodules; this hub re-exports the shared imports (so a
 //! submodule needs only `use super::*`) plus the small `err` helper, and wires
@@ -11,10 +11,7 @@ use pyo3::prelude::*;
 
 // --- shared imports, re-exported to every submodule via `use super::*` --------
 pub(crate) use crate::viewer::{self, WellTrack};
-pub(crate) use pyo3::exceptions::PyValueError;
-pub(crate) use pyo3::types::{PyDict, PyList};
-pub(crate) use serde_json::Value;
-pub(crate) use srs_core::{
+pub(crate) use peteksim::{
     aggregate as core_aggregate, build_well_log_bundle, crossplot as core_crossplot,
     distribution_panel, tornado_chart, Conformity, Correlation, CrossplotOpts, DistMarkers,
     DistSpec, Fluid, Framework as CoreFramework, LayersSpec, McConfig, McOutcome as CoreMc,
@@ -22,6 +19,9 @@ pub(crate) use srs_core::{
     UpscaleMethod, VariogramModel, VgmSpec, WellLogBundle, ZoneMcSpec, ZoneSpec, ZonedMcConfig,
     ZonedMcOutcome, SM3_PER_BCM, SM3_PER_MSM3,
 };
+pub(crate) use pyo3::exceptions::PyValueError;
+pub(crate) use pyo3::types::{PyDict, PyList};
+pub(crate) use serde_json::Value;
 
 mod framework;
 mod grid;
@@ -37,8 +37,8 @@ pub(crate) use project::*;
 pub(crate) use specs::*;
 pub(crate) use uncertainty::*;
 
-/// Map an [`srs_core::SrsError`] to a Python `ValueError`.
-pub(crate) fn err(e: srs_core::SrsError) -> PyErr {
+/// Map an [`peteksim::SrsError`] to a Python `ValueError`.
+pub(crate) fn err(e: peteksim::SrsError) -> PyErr {
     PyValueError::new_err(e.to_string())
 }
 

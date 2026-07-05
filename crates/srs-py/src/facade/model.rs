@@ -588,8 +588,8 @@ fn pick_sd(v: &Bound<'_, PyAny>) -> PyResult<f64> {
 fn build_structural(
     rows: Option<StructuralRows>,
 ) -> PyResult<(
-    Option<srs_core::PerturbationField>,
-    Vec<Option<srs_core::PerturbationField>>,
+    Option<peteksim::PerturbationField>,
+    Vec<Option<peteksim::PerturbationField>>,
 )> {
     let Some(rows) = rows else {
         return Ok((None, Vec::new()));
@@ -597,7 +597,7 @@ fn build_structural(
     let field_of = |sd: f64,
                     vgm: &Option<(String, f64)>,
                     what: &str|
-     -> PyResult<Option<srs_core::PerturbationField>> {
+     -> PyResult<Option<peteksim::PerturbationField>> {
         if sd <= 0.0 {
             return Ok(None);
         }
@@ -609,7 +609,7 @@ fn build_structural(
         })?;
         let vm = parse_vgm_model(model)?;
         Ok(Some(
-            srs_core::perturbation_field(sd, vm, *range).map_err(err)?,
+            peteksim::perturbation_field(sd, vm, *range).map_err(err)?,
         ))
     };
     let mut iter = rows.iter();
@@ -656,7 +656,7 @@ fn parse_zone_mc(map: &Bound<'_, PyDict>) -> PyResult<Vec<ZoneMcSpec>> {
     }
     Ok(out)
 }
-fn psummary_dict(py: Python<'_>, s: &srs_core::PSummary, samples: &[f64]) -> PyResult<Py<PyDict>> {
+fn psummary_dict(py: Python<'_>, s: &peteksim::PSummary, samples: &[f64]) -> PyResult<Py<PyDict>> {
     let d = PyDict::new(py);
     d.set_item("p90", s.p90)?;
     d.set_item("p50", s.p50)?;
@@ -699,7 +699,7 @@ fn build_zoned_zones_list(py: Python<'_>, o: &ZonedMcOutcome) -> PyResult<Py<PyL
     Ok(rows.unbind())
 }
 /// One per-zone (or total) volumes row as a dict (SI + report units).
-fn zone_volume_dict(py: Python<'_>, zv: &srs_core::ZoneVolume) -> PyResult<Py<PyDict>> {
+fn zone_volume_dict(py: Python<'_>, zv: &peteksim::ZoneVolume) -> PyResult<Py<PyDict>> {
     let d = PyDict::new(py);
     d.set_item("zone", &zv.zone)?;
     d.set_item("grv_mcm", zv.grv_mcm)?;

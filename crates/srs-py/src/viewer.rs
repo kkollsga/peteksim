@@ -7,14 +7,14 @@
 //! well tracks and an optional summary into that document, and marshals bundles
 //! to Python dicts. All compute lives in the bundles; nothing here renders.
 
+use peteksim::{
+    IntersectionBundle, MapBundle, MapSpec, SectionSpec, StaticModel, VolumeBundle, WellLogBundle,
+    DEFAULT_VIEW_PROPERTY,
+};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use serde::Serialize;
 use serde_json::Value;
-use srs_core::{
-    IntersectionBundle, MapBundle, MapSpec, SectionSpec, StaticModel, VolumeBundle, WellLogBundle,
-    DEFAULT_VIEW_PROPERTY,
-};
 
 /// A viewer payload-assembly error, carried as a plain message string.
 ///

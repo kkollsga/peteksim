@@ -301,7 +301,7 @@ impl Property {
 /// a facade-local vocabulary mapping (cube name, not a mnemonic alias), so it stays
 /// here; every other canonical mnemonic passes through unchanged.
 fn canonical_property_name(name: &str) -> String {
-    match srs_core::canonical_mnemonic(name).as_str() {
+    match peteksim::canonical_mnemonic(name).as_str() {
         "PHIE" => "PORO".to_string(),
         other => other.to_string(),
     }

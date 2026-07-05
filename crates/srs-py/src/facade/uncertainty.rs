@@ -208,7 +208,7 @@ impl ZonedUncertainty {
         zone: Option<String>,
         name: Option<String>,
     ) -> PyResult<Py<PyAny>> {
-        let (samples, ps): (&[f64], &srs_core::PSummary) = match &zone {
+        let (samples, ps): (&[f64], &peteksim::PSummary) = match &zone {
             Some(zn) => {
                 let z = self
                     .inner
