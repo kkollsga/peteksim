@@ -26,6 +26,8 @@ dynamic = ["version"]
 dependencies = ["petektools>=0.2.0"]
 
 [project.urls]
+# The petekSuite site is the canonical docs home for the whole family.
+Documentation = "https://peteksuite.readthedocs.io/en/latest/libraries/peteksim/"
 Repository = "https://github.com/kkollsga/peteksim"
 Issues = "https://github.com/kkollsga/peteksim/issues"
 

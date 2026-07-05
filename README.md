@@ -16,6 +16,15 @@ lengths/depths in metres (positive-down), volumes in Sm³ (reported in MSm³ for
 bcm for gas), GRV in mcm (10⁶ m³), FVF as dimensionless Rm³/Sm³. Imperial is opt-in
 conversion on your side, never a default.
 
+## Documentation
+
+The canonical docs for the whole petek family live on the **petekSuite site**
+— peteksim's pages there:
+
+- **[Library guide](https://peteksuite.readthedocs.io/en/latest/libraries/peteksim/)** — the peteksim guide.
+- **Tutorials** — [Simulation & uncertainty](https://peteksuite.readthedocs.io/en/latest/tutorials/simulation-uncertainty/) · [Static model build (flagship)](https://peteksuite.readthedocs.io/en/latest/tutorials/static-model-build/) (driven through the `peteksim` facade).
+- **[Notebooks](https://peteksuite.readthedocs.io/en/latest/notebooks/)** — executed examples: [full workflow](https://peteksuite.readthedocs.io/en/latest/notebooks/peteksim/01_full_workflow/) · [scenarios & uncertainty](https://peteksuite.readthedocs.io/en/latest/notebooks/peteksim/02_scenarios_uncertainty/).
+
 ## Install / build
 
 ```sh
