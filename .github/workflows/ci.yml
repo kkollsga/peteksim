@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: cargo build / clippy / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy (warnings = errors)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: build
+        run: cargo build --workspace
+      - name: test
+        run: cargo test --workspace
+
+  python:
+    name: maturin develop + import
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install maturin
+        run: pip install maturin
+      - name: build + import smoke test
+        run: |
+          maturin develop -m crates/srs-py/Cargo.toml
+          python -c "import peteksim; print(peteksim.version())"
+
+  wheels:
+    # Build the abi3 wheel and import + run it across a Python matrix so a
+    # toolchain regression (e.g. a pyo3 that can't link a new CPython — the
+    # 0.24-vs-3.14 blocker) is caught here, not by users. abi3-py39 means one
+    # wheel spans 3.9+, but we still build AND import on each interpreter so a
+    # per-version link/ABI break surfaces.
+    name: wheel build + run (py ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 = oldest abi3 floor; through the latest stable CPython.
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
+      - name: install maturin
+        run: pip install maturin
+      - name: build release wheel
+        run: maturin build --release -m crates/srs-py/Cargo.toml --out dist
+      - name: install wheel + run run_box_model
+        run: |
+          pip install --find-links dist --no-index peteksim
+          python - <<'PY'
+          import peteksim
+          r = peteksim.run_box_model(
+              area_acres=(80, 100, 130), gross_height_ft=(40, 50, 65),
+              porosity=0.25, net_to_gross=0.8, water_saturation=0.3, fvf=1.25,
+              fluid="oil", contact_depth_ft=9000, realizations=2000, seed=1,
+          )
+          assert r.p90 < r.p50 < r.p10, (r.p90, r.p50, r.p10)
+          assert len(r.samples) == r.realizations == 2000
+          print("peteksim", peteksim.version(), "ok:", r)
+          PY

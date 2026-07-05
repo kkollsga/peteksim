@@ -1,0 +1,27 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "peteksim"
+description = "petekSim — fast field/discovery appraisal toolkit (Rust core, Python API)"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Rust",
+    "License :: OSI Approved :: MIT License",
+]
+dynamic = ["version"]
+# The viewer is petekTools' horizontal unit (owner ruling
+# decision_viewer_home_petektools); peteksim consumes it Python-side, DAG-downward.
+# Pre-publish (no PyPI yet) the wheel is built from the sibling repo and dev-installed
+# (see README "Building" / CI): `maturin develop -m ../petekTools/pyproject.toml`
+# into this venv, or `pip install ../petekTools` for a from-source build.
+dependencies = ["petektools"]
+
+[tool.maturin]
+# Mixed layout: the compiled extension is peteksim._core; the pure-Python
+# package (the thin view()/save_view glue over petektools.viewer) lives under
+# python/peteksim/. The viewer JS assets moved to the petektools wheel.
+module-name = "peteksim._core"
+python-source = "python"
+features = ["pyo3/extension-module"]

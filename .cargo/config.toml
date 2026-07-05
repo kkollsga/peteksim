@@ -1,0 +1,9 @@
+# PyO3 builds `srs-py` as a cdylib that resolves CPython symbols at load time.
+# Plain `cargo build`/`cargo test` (no maturin) must tell the macOS linker to
+# defer those symbols, or the link fails with "_Py* not found". Maturin sets
+# this itself; this config makes the bare cargo gate work too.
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]

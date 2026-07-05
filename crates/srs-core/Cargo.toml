@@ -1,0 +1,43 @@
+[package]
+name = "srs-core"
+description = "Orchestration: model-first refinement loop"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+srs-units.workspace = true
+petektools.workspace = true
+# The analytics chart bundles serialize straight to the viewer `charts` payload.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# The wells_logs bundle encodes each numeric lane (md/tvd/curve) as a v3-style
+# base64 f32 block — the same wire the volume blocks use (petekStatic's srs-model
+# also encodes its blocks via base64), so the viewer decodes them on one path.
+base64 = "0.22"
+# The zoned-MC driver (`facade::zoned_mc`) samples per-zone contact/level draws on
+# ONE seeded stream (reproducibility) and shards the realize loop across template
+# clones — the same rand (0.10) + rayon petekStatic's own MC driver uses.
+rand = "0.10"
+rayon = "1"
+srs-grid.workspace = true
+srs-volumetrics.workspace = true
+srs-uncertainty.workspace = true
+srs-gridder.workspace = true
+srs-wireframe.workspace = true
+# srs-model (petekStatic, cross-repo): the relocated refine orchestration — the
+# refine facade builds StaticModels across this seam (srs-petro moved behind it).
+srs-model.workspace = true
+# petekio's neutral Distribution DTO — the input type of the lifted `distribution_of`
+# (DTO→sampler) mapping. Same published 0.2.x srs-data carries.
+petekio.workspace = true
+
+[dev-dependencies]
+# srs-data (petekStatic, cross-repo): the ingest adapter. Its real-petekio + refine
+# end-to-end tests (which need srs-core's refine loop + the sampler) live here now.
+srs-data.workspace = true

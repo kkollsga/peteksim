@@ -1,0 +1,68 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/srs-units",
+    "crates/srs-pvt",
+    "crates/srs-core",
+    "crates/srs-py",
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license-file = "LICENSE"
+repository = "https://github.com/kkollsga/petekSim"
+rust-version = "1.80"
+
+[workspace.dependencies]
+srs-units = { path = "crates/srs-units" }
+srs-pvt = { path = "crates/srs-pvt" }
+srs-core = { path = "crates/srs-core" }
+# petekTools (pure-leaf toolkit, downstream DAG edge): home of the domain-
+# agnostic unit conversions moved out of srs-units. Path dep, not a published bump.
+petektools = { path = "../petekTools" }
+# petekStatic (geomodel layer, downstream DAG edge): srs-grid + srs-wireframe +
+# srs-gridder + srs-petro were moved there. Consumed across the repo seam via path deps (single-operator, no
+# release cadence yet). petekstatic-error is petekStatic's error enum, composed
+# into SrsError with #[from] so `?` works across the seam.
+srs-grid = { path = "../petekStatic/crates/srs-grid" }
+srs-gridder = { path = "../petekStatic/crates/srs-gridder" }
+srs-petro = { path = "../petekStatic/crates/srs-petro" }
+srs-wireframe = { path = "../petekStatic/crates/srs-wireframe" }
+# srs-data: the petekio→wireframe ingest adapter (moved to petekStatic). It carries
+# petekio's neutral Distribution DTO; the DTO→sampler mapping (distribution_of) was
+# lifted UP into srs-core (below). Consumed cross-repo for srs-core's data tests.
+srs-data = { path = "../petekStatic/crates/srs-data" }
+petekstatic-error = { path = "../petekStatic/crates/petekstatic-error" }
+# srs-volumetrics + srs-uncertainty relocated DOWN to petekStatic 2026-07-03
+# (graph `decision_layer_charters`): volumetrics + MC-over-realizations are the
+# GEOMODEL layer's now. srs-core consumes them across the repo seam via path deps
+# (the geomodel pattern, `decision_srs_core_seam_pathdeps`). FVF is a validated
+# scalar type owned by srs-volumetrics; srs-pvt stays here for the dynamic work.
+srs-volumetrics = { path = "../petekStatic/crates/srs-volumetrics" }
+srs-uncertainty = { path = "../petekStatic/crates/srs-uncertainty" }
+# srs-model: the StaticModel aggregate + regeneration seam (the relocated
+# RefiningModel structural/population half). srs-core's refine facade delegates
+# the geomodel build here and applies the FVF tail on the model's own volumes.
+srs-model = { path = "../petekStatic/crates/srs-model" }
+# petekio (DATA layer): srs-core names petekio's neutral Distribution DTO in
+# `distribution_of` (the lifted DTO→sampler mapping). Same one srs-data uses, so
+# the DTO type unifies across the seam.
+# PRE-RELEASE FAMILY MODE (SI migration, decision_si_units_standard): path dep on
+# ../petekIO HEAD — the migration depends on petekio HEAD's negative-down
+# elevation z-convention (0.3.0 window). The publish batch swaps this back to the
+# registry version (was `petekio = "0.2.1"`).
+petekio = { path = "../petekIO" }
+thiserror = "2"
+
+# Warnings are errors (CLAUDE.md gate). Applied per-crate via `[lints] workspace = true`.
+[workspace.lints.rust]
+unused = { level = "deny", priority = -1 }
+dead_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+
+[profile.release]
+lto = true
+codegen-units = 1

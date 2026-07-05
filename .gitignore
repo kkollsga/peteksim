@@ -1,0 +1,27 @@
+# Local working folders + internal tooling (not part of the published library)
+/dev-docs/
+/inbox/
+/research/
+/tools/
+/notes/
+/.claude/
+/.mcp.json
+/CLAUDE.local.md
+/Makefile.local
+
+# Python env / caches
+/.venv-srs/
+**/__pycache__/
+*.pyc
+
+# Build artifacts
+/target/
+**/*.rs.bk
+*.tmp
+
+# maturin editable-install artifact (built extension placed in the source pkg)
+crates/srs-py/python/peteksim/_core*.so
+
+# macOS
+.DS_Store
+**/.DS_Store
