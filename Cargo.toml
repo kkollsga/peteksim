@@ -23,9 +23,8 @@ rust-version = "1.80"
 srs-units = { path = "crates/srs-units", version = "0.1.0" }
 srs-pvt = { path = "crates/srs-pvt", version = "0.1.0" }
 srs-core = { path = "crates/srs-core", version = "0.1.0" }
-# CROSS-REPO family deps: crates.io registry pins for publish; the workspace-root
-# `[patch.crates-io]` (bottom of this file) redirects each to its sibling working
-# tree for LOCAL/CI dev builds (dev-only, stripped from the published crates).
+# CROSS-REPO family deps: resolved from crates.io (the family is published; the
+# dev-only [patch.crates-io] was removed at launch).
 # petekTools (pure-leaf toolkit, downstream DAG edge): numeric kernels + units.
 petektools = "0.2.0"
 # petekStatic (GEOMODEL layer, downstream DAG edge): the geomodel + static-
@@ -63,25 +62,3 @@ all = { level = "deny", priority = -1 }
 [profile.release]
 lto = true
 codegen-units = 1
-
-# --- DEV-ONLY: local family builds ------------------------------------------
-# The cross-repo deps above (petektools, petekio, and the petekStatic crates) are
-# crates.io registry pins for publish. This patch redirects each to its sibling
-# working tree so local/CI dev builds compile against family HEAD (one copy of
-# each in the lockfile). `[patch]` is a WORKSPACE-ROOT concern: cargo strips it
-# from every published member manifest — a downstream consumer of `peteksim`'s
-# crates never sees it and resolves the registry pins from crates.io. Harmless in
-# the published artifacts; remove once the upstream family crates are on crates.io
-# (they become redundant then). Verified: `cargo publish --dry-run` uses the pins.
-[patch.crates-io]
-petektools = { path = "../petekTools" }
-petekio = { path = "../petekIO" }
-petekstatic-error = { path = "../petekStatic/crates/petekstatic-error" }
-srs-grid = { path = "../petekStatic/crates/srs-grid" }
-srs-gridder = { path = "../petekStatic/crates/srs-gridder" }
-srs-petro = { path = "../petekStatic/crates/srs-petro" }
-srs-wireframe = { path = "../petekStatic/crates/srs-wireframe" }
-srs-data = { path = "../petekStatic/crates/srs-data" }
-srs-volumetrics = { path = "../petekStatic/crates/srs-volumetrics" }
-srs-uncertainty = { path = "../petekStatic/crates/srs-uncertainty" }
-srs-model = { path = "../petekStatic/crates/srs-model" }
