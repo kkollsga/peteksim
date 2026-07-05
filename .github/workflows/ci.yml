@@ -36,26 +36,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: install maturin
-        run: pip install maturin
+      # maturin develop requires an activated virtualenv on the runner.
       - name: build + import smoke test
         run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install maturin
           maturin develop -m crates/srs-py/Cargo.toml
           python -c "import peteksim; print(peteksim.version())"
 
   wheels:
     # Build the abi3 wheel and import + run it across a Python matrix so a
     # toolchain regression (e.g. a pyo3 that can't link a new CPython — the
-    # 0.24-vs-3.14 blocker) is caught here, not by users. abi3-py39 means one
-    # wheel spans 3.9+, but we still build AND import on each interpreter so a
+    # 0.24-vs-3.14 blocker) is caught here, not by users. abi3-py310 means one
+    # wheel spans 3.10+, but we still build AND import on each interpreter so a
     # per-version link/ABI break surfaces.
     name: wheel build + run (py ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # 3.9 = oldest abi3 floor; through the latest stable CPython.
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        # 3.10 = the abi3 floor (abi3-py310, requires-python >=3.10); through
+        # the latest stable CPython.
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -69,8 +72,10 @@ jobs:
       - name: build release wheel
         run: maturin build --release -m crates/srs-py/Cargo.toml --out dist
       - name: install wheel + run run_box_model
+        # Install the freshly built local wheel by path (never PyPI's peteksim);
+        # runtime deps (petektools) resolve from PyPI.
         run: |
-          pip install --find-links dist --no-index peteksim
+          pip install dist/peteksim-*.whl
           python - <<'PY'
           import peteksim
           r = peteksim.run_box_model(
