@@ -25,19 +25,22 @@ The canonical docs for the whole petek family live on the **petekSuite site**
 - **Tutorials** — [Simulation & uncertainty](https://peteksuite.readthedocs.io/en/latest/tutorials/simulation-uncertainty/) · [Static model build (flagship)](https://peteksuite.readthedocs.io/en/latest/tutorials/static-model-build/) (driven through the `peteksim` facade).
 - **[Notebooks](https://peteksuite.readthedocs.io/en/latest/notebooks/)** — executed examples: [full workflow](https://peteksuite.readthedocs.io/en/latest/notebooks/peteksim/01_full_workflow/) · [scenarios & uncertainty](https://peteksuite.readthedocs.io/en/latest/notebooks/peteksim/02_scenarios_uncertainty/).
 
-## Install / build
+## Install
 
 ```sh
-# build the Python extension into a venv
-python3 -m venv .venv-srs
-# the viewer is petekTools' horizontal petektools.viewer unit — peteksim depends
-# on the petektools wheel. Pre-publish (no PyPI yet) build it from the sibling repo:
-.venv-srs/bin/python -m pip install ../petekTools        # or: maturin build + pip install the wheel
-VIRTUAL_ENV="$PWD/.venv-srs" .venv-srs/bin/maturin develop -m crates/srs-py/Cargo.toml
+pip install peteksim        # the whole stack behind one facade (Python 3.10+)
 ```
 
-Once both wheels publish to PyPI the sibling-build step drops to a plain
-`pip install petektools`.
+The wheel pulls its family dependencies (petektools) automatically. Rust
+consumers: `cargo add peteksim`.
+
+### Building from source (contributors)
+
+```sh
+python3 -m venv .venv-srs
+.venv-srs/bin/pip install petektools    # the horizontal viewer/toolkit wheel
+VIRTUAL_ENV="$PWD/.venv-srs" .venv-srs/bin/maturin develop -m crates/srs-py/Cargo.toml
+```
 
 ## First volumes — a STOIIP P-curve in a handful of calls
 

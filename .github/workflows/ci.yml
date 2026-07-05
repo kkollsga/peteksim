@@ -79,9 +79,9 @@ jobs:
           python - <<'PY'
           import peteksim
           r = peteksim.run_box_model(
-              area_acres=(80, 100, 130), gross_height_ft=(40, 50, 65),
+              area_km2=(0.32, 0.4, 0.52), gross_height_m=(12, 15, 20),
               porosity=0.25, net_to_gross=0.8, water_saturation=0.3, fvf=1.25,
-              fluid="oil", contact_depth_ft=9000, realizations=2000, seed=1,
+              fluid="oil", contact_m=2743, realizations=2000, seed=1,
           )
           assert r.p90 < r.p50 < r.p10, (r.p90, r.p50, r.p10)
           assert len(r.samples) == r.realizations == 2000
