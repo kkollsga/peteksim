@@ -6,23 +6,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed — packaging (internal, behaviour-neutral)
+## [0.1.1] - 2026-07-05
 
-- **Consolidated the three published library crates into one.** `srs-units`,
-  `srs-pvt` and `srs-core` were merged into a single crate, **`peteksim`**
-  (0.1.0), at the repo root. Their boundaries are preserved as modules —
-  `peteksim::{units, pvt, core}` — and the headline Rust API (`run_model`, the
-  appraisal facade types, the `Distribution` seam, the view bundles) is
-  re-exported at the crate root. File moves + mechanical path rewrites only; no
-  logic changed. The workspace keeps its `crates/srs-py` member (the `peteksim`
-  wheel source), which now binds the `peteksim` crate; the published PyPI wheel
-  surface (`peteksim`) is unchanged.
-- **Repointed the geomodel dependency at petekStatic's consolidated crate.** The
-  former per-crate path deps on petekStatic's `srs-*` crates are now a single
-  `petekstatic = "0.1.0"` (path `../petekStatic`); the `srs_model::` /
-  `srs_grid::` / `srs_wireframe::` (…) imports rewrote to
-  `petekstatic::{model, grid, wireframe, …}::`. petekio / petekTools pins
-  unchanged.
+### Changed
+
+- **Require `petektools>=0.2.1` in the wheel.** The published 0.1.0 wheel's
+  metadata allowed petektools 0.2.0, whose wheels are unimportable on Python
+  3.10/3.11 — so upgraders could keep the broken viewer dependency. The 0.1.1
+  floor forces the fixed release, repairing `model.view()` / `save_view()`
+  imports on Python 3.10/3.11 for anyone upgrading.
+- **Release workflow is now gated on CI.** The tag-triggered Release run
+  executes the same fmt / clippy / test bar as CI in a `gates` job before any
+  build or publish job starts — a red gate blocks the release by construction.
+
+### Fixed
+
+- **Clippy `manual_option_zip` (Rust 1.96).** Lint fix only; no behaviour
+  change.
 
 ## [0.1.0] - 2026-07-05
 
@@ -119,10 +119,28 @@ a default.
   window. It keeps working and emits a `DeprecationWarning`; new code should use
   `proj.grid_geometry(...).build(ps.Horizons(...))`.
 
+### Changed — packaging (internal, behaviour-neutral)
+
+- **Consolidated the three published library crates into one.** `srs-units`,
+  `srs-pvt` and `srs-core` were merged into a single crate, **`peteksim`**
+  (0.1.0), at the repo root. Their boundaries are preserved as modules —
+  `peteksim::{units, pvt, core}` — and the headline Rust API (`run_model`, the
+  appraisal facade types, the `Distribution` seam, the view bundles) is
+  re-exported at the crate root. File moves + mechanical path rewrites only; no
+  logic changed. The workspace keeps its `crates/srs-py` member (the `peteksim`
+  wheel source), which now binds the `peteksim` crate; the published PyPI wheel
+  surface (`peteksim`) is unchanged.
+- **Repointed the geomodel dependency at petekStatic's consolidated crate.** The
+  former per-crate path deps on petekStatic's `srs-*` crates are now a single
+  `petekstatic = "0.1.0"`; the `srs_model::` / `srs_grid::` / `srs_wireframe::`
+  (…) imports rewrote to `petekstatic::{model, grid, wireframe, …}::`.
+  petekio / petekTools pins unchanged.
+
 ### Licensing
 
 - petekSim is licensed under the **Business Source License 1.1** (BUSL-1.1); each
   released version converts to Apache-2.0 four years after publication. See `LICENSE`.
 
-[Unreleased]: https://github.com/kkollsga/peteksim/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/kkollsga/peteksim/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/kkollsga/peteksim/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/kkollsga/peteksim/releases/tag/v0.1.0
