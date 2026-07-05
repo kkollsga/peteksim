@@ -3,9 +3,12 @@ name = "srs-py"
 description = "Thin PyO3 bindings over srs-core (the petekSim Python library)"
 version.workspace = true
 edition.workspace = true
-license-file.workspace = true
+license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+# Not for crates.io: this crate is the `peteksim` wheel source (built by maturin).
+# The Rust library surface is srs-core; publishing this cdylib would be redundant.
+publish = false
 
 [lints]
 workspace = true

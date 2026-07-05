@@ -3,9 +3,11 @@ name = "srs-units"
 description = "The petekSim workspace error type (SrsError). Unit conversions moved to petektools::units."
 version.workspace = true
 edition.workspace = true
-license-file.workspace = true
+license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+keywords = ["reservoir", "simulation", "petroleum", "units", "error"]
+categories = ["science", "simulation"]
 
 [lints]
 workspace = true

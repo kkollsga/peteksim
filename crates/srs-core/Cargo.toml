@@ -3,9 +3,11 @@ name = "srs-core"
 description = "Orchestration: model-first refinement loop"
 version.workspace = true
 edition.workspace = true
-license-file.workspace = true
+license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+keywords = ["reservoir", "appraisal", "simulation", "subsurface", "volumetrics"]
+categories = ["science", "simulation"]
 
 [lints]
 workspace = true

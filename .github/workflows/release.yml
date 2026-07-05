@@ -1,0 +1,76 @@
+name: Release
+
+# Tag-triggered PyPI publish (v* tags) via OIDC trusted publishing — no secret.
+# The `peteksim` wheel is built from crates/srs-py (its pyproject.toml). The
+# crates.io publish of the srs-units/srs-pvt/srs-core library crates is done from
+# the local runbook (ordered, cross-repo deps), not here.
+#
+# Configure a pending publisher on PyPI: project `peteksim`, owner kkollsga, repo
+# peteksim, workflow release.yml, environment pypi.
+#
+# NOTE: before pushing a v* tag, remove the root Cargo.toml [patch.crates-io]
+# section — its sibling paths don't exist on the CI runner, and by release time
+# the upstream family crates are on crates.io so the registry pins resolve.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sdist:
+    name: build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+          working-directory: crates/srs-py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: crates/srs-py/dist
+
+  wheels:
+    name: build wheels ${{ matrix.runner }} ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest, target: x86_64 }
+          - { runner: ubuntu-latest, target: aarch64 }
+          - { runner: macos-14, target: universal2-apple-darwin }
+          - { runner: windows-latest, target: x64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist
+          sccache: "true"
+          manylinux: auto
+          working-directory: crates/srs-py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.runner }}-${{ matrix.target }}
+          path: crates/srs-py/dist
+
+  publish-pypi:
+    name: PyPI (trusted publishing)
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1

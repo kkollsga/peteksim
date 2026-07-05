@@ -723,7 +723,7 @@ checksum = "4ec91767ecc0a0bbe558ce8c9da33c068066c57ecc8bb8477ef8c1ad3ef77c27"
 
 [[package]]
 name = "petekio"
-version = "0.2.8"
+version = "0.3.0"
 dependencies = [
  "bincode",
  "csv",
@@ -741,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "petekstatic-error"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekio",
  "petektools",
@@ -750,7 +750,7 @@ dependencies = [
 
 [[package]]
 name = "petektools"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytemuck",
  "memmap2",
@@ -1230,7 +1230,7 @@ dependencies = [
 
 [[package]]
 name = "srs-core"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "base64",
  "petekio",
@@ -1251,7 +1251,7 @@ dependencies = [
 
 [[package]]
 name = "srs-data"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekio",
  "petekstatic-error",
@@ -1261,7 +1261,7 @@ dependencies = [
 
 [[package]]
 name = "srs-grid"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekstatic-error",
  "petektools",
@@ -1269,7 +1269,7 @@ dependencies = [
 
 [[package]]
 name = "srs-gridder"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "ndarray",
  "petekstatic-error",
@@ -1280,7 +1280,7 @@ dependencies = [
 
 [[package]]
 name = "srs-model"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "base64",
  "ndarray",
@@ -1302,21 +1302,21 @@ dependencies = [
 
 [[package]]
 name = "srs-petro"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekstatic-error",
 ]
 
 [[package]]
 name = "srs-pvt"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "srs-units",
 ]
 
 [[package]]
 name = "srs-py"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "pyo3",
  "serde",
@@ -1326,7 +1326,7 @@ dependencies = [
 
 [[package]]
 name = "srs-spill"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekstatic-error",
  "petektools",
@@ -1337,7 +1337,7 @@ dependencies = [
 
 [[package]]
 name = "srs-uncertainty"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekstatic-error",
  "petektools",
@@ -1345,7 +1345,7 @@ dependencies = [
 
 [[package]]
 name = "srs-units"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekio",
  "petekstatic-error",
@@ -1355,7 +1355,7 @@ dependencies = [
 
 [[package]]
 name = "srs-volumetrics"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "petekstatic-error",
  "petektools",
@@ -1365,7 +1365,7 @@ dependencies = [
 
 [[package]]
 name = "srs-wireframe"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "serde",
 ]
