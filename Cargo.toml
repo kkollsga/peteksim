@@ -58,9 +58,12 @@ rust-version = "1.80"
 peteksim = { path = ".", version = "0.1.0" }
 # CROSS-REPO family deps.
 # petekStatic (GEOMODEL layer, downstream DAG edge): the consolidated geomodel +
-# static-uncertainty crate, consumed across the repo seam via `../petekStatic`.
+# static-uncertainty crate. Resolved from crates.io; to develop against the
+# sibling checkout, patch it locally in a gitignored .cargo/config.toml:
+#   [patch.crates-io]
+#   petekstatic = { path = "../petekStatic" }
 # petekstatic::error::StaticError composes into SrsError via #[from].
-petekstatic = { version = "0.1.0", path = "../petekStatic" }
+petekstatic = "0.1.0"
 # petekTools (pure-leaf toolkit, downstream DAG edge): numeric kernels + units +
 # the viewer unit. Resolved from crates.io.
 petektools = "0.2.0"

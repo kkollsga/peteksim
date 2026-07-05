@@ -759,6 +759,8 @@ dependencies = [
 [[package]]
 name = "petekstatic"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a55c9b09db6a5877629cce95cb1eaf5210fe7bd5de2cd86f5be3bba59c757444"
 dependencies = [
  "base64",
  "ndarray",
