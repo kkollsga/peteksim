@@ -79,6 +79,20 @@ geom.build(horizons: Horizons, subzones: Subzones | None = None,
     # in one construction. `ties`/`gridding` default to the ones on `horizons`.
 ```
 
+Project ingest is content-detected through `petekio.detect()` for surfaces,
+points, polygons, Petrel tops, LAS, wellpaths, and CRS sidecars. Unknown files keep
+the legacy extension fallback and still appear in `Inventory.skipped` when they
+cannot be placed. Well files are grouped by detected well id anywhere under the
+project root, not only under a `Wells/` directory. Petrel `Type == "Other"` fluid
+contacts surface through petekIO bore contacts and remain pickable via
+`proj.tops.pick("GOC"|"FWL"|"OWC", ...)` when the contact's well can be matched
+to a loaded bore.
+
+An explicit `outline="Name"` must resolve to a loaded polygon or raises a loud
+error listing the loaded polygon names. When `outline` is omitted, petekSim tries
+the conventional `ModelEdge`; if it is absent, it falls back to the framework
+bbox with a visible warning.
+
 ## Structure specs
 
 ```python
@@ -184,6 +198,14 @@ ps.Crossplot(x, y, wells=(), color_by="well", x_log=False, y_log=False,
              regression=False) -> Crossplot     # applied on proj.crossplot_bundle
 ps.Tornado(base=None, units: str = "MSm³", fold_count: int = 8) -> Tornado
 ps.Distribution(gas=False, zone=None, name=None) -> Distribution
+
+ps.synth_asset(root, *, seed=20_260_704, n_wells=8, ncol=41,
+               surfaces_as_points=False) -> dict
+    # Compatibility shim over petektools.synth_asset. The returned manifest keeps
+    # petekSim's `spill_recipe` key.
+from peteksim.synth_asset import spill_recipe
+spill_recipe(ncol=61, n_cubes=3, nk_per_zone=14) -> dict
+    # petekSim-owned spill-forcing estimate; reads the petekStatic live-set seam.
 
 ps.AssetSpec(name="", load=None, horizons=None, subzones=None, layering=None,
              contacts=None, ties=None, gridding=None, props=None, mc=None,

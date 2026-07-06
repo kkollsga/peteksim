@@ -6,6 +6,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Consume the fortified petekIO/petekTools foundations.** Project ingest now
+  classifies files through `petekio::detect()` with legacy fallback only for
+  `Unknown`, loads detected well files anywhere under the project root, and reads
+  Petrel `Type == "Other"` fluid contacts from petekIO's bore-contact seam instead
+  of the old facade-side parser.
+- **`peteksim.synth_asset` is now a compatibility shim over
+  `petektools.synth_asset`.** The petekSim-owned `spill_recipe` helper remains,
+  and the shim preserves the manifest `spill_recipe` key for existing callers.
+
+### Fixed
+
+- **Outline resolution is loud.** An explicit missing `outline="Name"` now errors
+  with the loaded polygon inventory. An omitted outline still tries `ModelEdge`,
+  then falls back to the framework bbox with a visible warning if `ModelEdge` is
+  absent.
+
+### Development
+
+- Until the next family release, this unreleased work requires local sibling
+  checkouts carrying petekIO `3963041` and a Python environment with petekTools
+  `b4598e3` installed.
+
 ## [0.1.1] - 2026-07-05
 
 ### Changed

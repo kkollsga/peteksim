@@ -189,10 +189,7 @@ impl Framework {
             });
         }
 
-        let area_m2 = match outline.and_then(|o| proj.geo().polygons(o)) {
-            Some(p) => p.area(),
-            None => footprint_area(&top_geom),
-        };
+        let (outline, area_m2) = resolve_outline(proj, outline, &top_geom)?;
         // Gross from Top→Base separation across the resolved sources (exact per-node
         // mean for a Mapped pair — identical to the old wireframe `mean_separation`;
         // difference of per-source mean depths for a Scatter pair, no gridding), else
@@ -203,7 +200,7 @@ impl Framework {
         Ok(Self {
             wireframe: None,
             tie_to_tops,
-            outline: outline.map(str::to_string),
+            outline,
             top_geom,
             area_m2,
             gross_m: gross,
@@ -736,6 +733,40 @@ fn condition_scatter_facade(stack: &mut HorizonStack, geom: &GridGeometry) -> Re
     Ok(())
 }
 
+fn resolve_outline(
+    proj: &Project,
+    outline: Option<&str>,
+    geom: &GridGeometry,
+) -> Result<(Option<String>, f64), SrsError> {
+    if let Some(name) = outline {
+        let poly = proj.geo().polygons(name).ok_or_else(|| {
+            SrsError::InvalidInput(format!(
+                "outline polygon '{name}' not loaded; loaded polygons: {}",
+                polygon_inventory(proj)
+            ))
+        })?;
+        return Ok((Some(name.to_string()), poly.area()));
+    }
+    if let Some(poly) = proj.geo().polygons("ModelEdge") {
+        return Ok((Some("ModelEdge".to_string()), poly.area()));
+    }
+    eprintln!(
+        "peteksim: default outline 'ModelEdge' not loaded; using framework bbox area/boundary. \
+         Loaded polygons: {}",
+        polygon_inventory(proj)
+    );
+    Ok((None, footprint_area(geom)))
+}
+
+fn polygon_inventory(proj: &Project) -> String {
+    let names: Vec<&str> = proj.geo().polygons_named().map(|(name, _)| name).collect();
+    if names.is_empty() {
+        "<none>".to_string()
+    } else {
+        names.join(", ")
+    }
+}
+
 fn boundary_of(proj: &Project, outline: Option<&str>, geom: &GridGeometry) -> Boundary {
     if let Some(name) = outline {
         if let Some(poly) = proj.geo().polygons(name) {
@@ -749,6 +780,12 @@ fn boundary_of(proj: &Project, outline: Option<&str>, geom: &GridGeometry) -> Bo
                     };
                 }
             }
+        } else {
+            eprintln!(
+                "peteksim: resolved outline '{name}' disappeared before boundary build; \
+                 using framework bbox. Loaded polygons: {}",
+                polygon_inventory(proj)
+            );
         }
     }
     bbox_ring(geom)

@@ -18,29 +18,28 @@ pub(super) fn nearest_node_value(s: &Surface, x: f64, y: f64) -> f64 {
     s.values()[[i, j]]
 }
 
-/// Discover the set of well ids under a `wells/` tree from its survey/log
-/// filenames — tolerant of both the split Petrel `Paths/` + `Logs/` layout (one
-/// well, many bores sharing an `<id>_<bore>` name) and the per-well-subdir
-/// layout (`wells/A1/A1.wellpath`). Ids come from the **wellpath** stems (the
-/// surveys define the wells); when a tree carries no surveys they come from the
-/// LAS stems. Each stem's trailing bore token is dropped so every bore of a well
-/// folds to one id, which petekio's `load_well` then re-groups into bores. A
-/// core LAS thus shares its well's id rather than spawning a spurious well.
-pub(super) fn discover_well_ids(wells_dir: &Path) -> Vec<String> {
-    let mut files = Vec::new();
-    collect_files(wells_dir, &mut files);
-    let mut ids = ids_from_stems(&files, "wellpath");
+/// Discover well ids from detected survey/log filenames anywhere in the project
+/// tree. Ids come from **wellpath** stems first (the surveys define wells); when
+/// a tree carries no surveys they come from LAS stems. Each stem's trailing bore
+/// token is dropped so every bore of a well folds to one id, which petekio's
+/// `load_well` then re-groups into bores. A core LAS thus shares its well's id
+/// rather than spawning a spurious well.
+pub(super) fn discover_well_ids(files: &[(PathBuf, FormatKind)]) -> Vec<String> {
+    let mut ids = ids_from_detected_stems(files, FormatKind::WellPath);
     if ids.is_empty() {
-        ids = ids_from_stems(&files, "las");
+        ids = ids_from_detected_stems(files, FormatKind::Las);
     }
     ids
 }
 
-/// The deduped, sorted well ids from every `files` entry with extension `ext`
+/// The deduped, sorted well ids from every detected `files` entry with `kind`
 /// (case-insensitive dedup so `99/9-1` variants collapse).
-pub(super) fn ids_from_stems(files: &[PathBuf], ext: &str) -> Vec<String> {
+pub(super) fn ids_from_detected_stems(
+    files: &[(PathBuf, FormatKind)],
+    kind: FormatKind,
+) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
-    for p in files.iter().filter(|p| ext_of(p) == ext) {
+    for p in files.iter().filter(|(_, k)| *k == kind).map(|(p, _)| p) {
         let id = well_id_from_stem(&file_stem(p));
         if !ids.iter().any(|e| e.eq_ignore_ascii_case(&id)) {
             ids.push(id);
@@ -193,7 +192,10 @@ pub(super) fn lattice_from_bbox(b: &BBox, cell_size_m: Option<f64>) -> GridGeome
     }
 }
 
-pub(super) fn discover_tops(geo: &GeoData, contacts: &[(String, String, f64)]) -> Vec<String> {
+pub(super) fn discover_tops(
+    geo: &GeoData,
+    compat_contacts: &[(String, String, f64)],
+) -> Vec<String> {
     let mut names: BTreeSet<String> = BTreeSet::new();
     // Read zones **per bore** — a multi-sidetrack well carries its strat column on
     // each bore, and the well-level `zones()` would resolve-empty on it.
@@ -202,27 +204,23 @@ pub(super) fn discover_tops(geo: &GeoData, contacts: &[(String, String, f64)]) -
             for iv in bore.zones() {
                 names.insert(iv.name.clone());
             }
+            for c in bore.contacts() {
+                names.insert(c.name.clone());
+            }
         }
     }
-    // Surface the fluid-contact pick names (GOC/FWL/…) too, so `inventory().tops`
-    // advertises them as pickable (F3).
-    for (surf, _, _) in contacts {
-        names.insert(surf.clone());
+    for (name, _, _) in compat_contacts {
+        names.insert(name.clone());
     }
     names.into_iter().collect()
 }
 
-/// Parse the **fluid-contact** picks (`Type == "Other"`: GOC/FWL/OWC/…) from a
-/// Petrel well-tops file — the picks petekio's *stratigraphic* tops loader
-/// intentionally drops (it keeps only `Type == "Horizon"`). Facade-side so the
-/// two-contact `grid.model(...)` API can surface them (F3). Header-driven (the
-/// column order is read from the `BEGIN HEADER … END HEADER` block); returns
-/// `(surface_name, well, depth_m)` with depth = subsea TVD (`-Z`, positive-down —
-/// the same elevation convention the facade applies to surfaces/picks).
+/// Compatibility parser for Petrel `Type == "Other"` rows that petekIO cannot
+/// attach to a loaded bore. petekIO-owned bore contacts are the primary source;
+/// this preserves old facade-visible inventory/pick behaviour for unassigned
+/// field-level rows and Latin-1 contact names until petekIO exposes those rows
+/// separately.
 pub(super) fn parse_other_contacts(path: &Path) -> Vec<(String, String, f64)> {
-    // Petrel tops exports are often Latin-1 (Norwegian names like "Blåbær"), not
-    // UTF-8 — decode permissively so a stray high byte can't abort the parse
-    // (R-b; matches petekio's own tops reader, which now decodes Latin-1 too).
     let Ok(bytes) = std::fs::read(path) else {
         return Vec::new();
     };
@@ -264,7 +262,6 @@ pub(super) fn parse_other_contacts(path: &Path) -> Vec<(String, String, f64)> {
             continue;
         };
         let well = col("well").cloned().unwrap_or_default();
-        // Subsea TVD from the Z (negative-down elevation) column.
         let Some(depth) = col("z").and_then(|s| s.parse::<f64>().ok()).map(|z| -z) else {
             continue;
         };
@@ -275,16 +272,10 @@ pub(super) fn parse_other_contacts(path: &Path) -> Vec<(String, String, f64)> {
     out
 }
 
-/// Decode bytes as Latin-1 (ISO-8859-1): every byte maps to the Unicode scalar of
-/// the same value, so it never fails on a high byte (R-b). Pure ASCII is
-/// unchanged; `0xC5` → `Å`, etc.
 pub(super) fn decode_latin1(bytes: &[u8]) -> String {
     bytes.iter().map(|&b| b as char).collect()
 }
 
-/// Tokenize a Petrel tops data row: whitespace-separated, but a double-quoted
-/// field (a Surface/Well name that may contain spaces) is one token, quotes
-/// stripped.
 pub(super) fn split_petrel_tokens(line: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut cur = String::new();
@@ -319,6 +310,42 @@ pub(super) enum Kind {
     Surface,
     Polygons,
     Points,
+}
+
+pub(super) fn detected_load_kind(kind: FormatKind, parent: &str, ext: &str) -> Option<Kind> {
+    match kind {
+        FormatKind::IrapClassicGrid | FormatKind::Cps3Grid => Some(Kind::Surface),
+        FormatKind::Cps3Lines => Some(Kind::Polygons),
+        FormatKind::GeoJson => {
+            if dir_is(parent, &["point", "scatter"]) {
+                Some(Kind::Points)
+            } else {
+                Some(Kind::Polygons)
+            }
+        }
+        FormatKind::IrapClassicPoints => {
+            if dir_is(parent, &["polygon", "outline"]) || matches!(ext, "pol" | "shp") {
+                Some(Kind::Polygons)
+            } else {
+                Some(Kind::Points)
+            }
+        }
+        FormatKind::EarthVisionGrid | FormatKind::CsvPoints => Some(Kind::Points),
+        FormatKind::Las
+        | FormatKind::WellPath
+        | FormatKind::PetrelTops
+        | FormatKind::CrsMetaXml
+        | FormatKind::Unknown => None,
+    }
+}
+
+pub(super) fn unknown_extension_load_kind(ext: &str) -> Option<Kind> {
+    match ext {
+        "irap" | "gri" | "cps3grid" => Some(Kind::Surface),
+        "geojson" | "json" | "pol" | "shp" | "cps3lines" => Some(Kind::Polygons),
+        "csv" | "xyz" | "dat" | "irapclassicpoints" | "earthvisiongrid" => Some(Kind::Points),
+        _ => None,
+    }
 }
 
 pub(super) fn load_named(geo: &mut GeoData, path: &Path, inv: &mut Inventory, kind: Kind) {
@@ -374,28 +401,6 @@ pub(super) fn parent_name(p: &Path) -> String {
 
 pub(super) fn dir_is(name: &str, needles: &[&str]) -> bool {
     needles.iter().any(|n| name.contains(n))
-}
-
-pub(super) fn under_dir(p: &Path, dir: &str) -> bool {
-    p.components().any(|c| {
-        c.as_os_str()
-            .to_str()
-            .map(|s| s.eq_ignore_ascii_case(dir))
-            .unwrap_or(false)
-    })
-}
-
-pub(super) fn child_dirs_named(root: &Path, name: &str) -> Vec<PathBuf> {
-    let mut out = Vec::new();
-    if let Ok(rd) = std::fs::read_dir(root) {
-        for e in rd.flatten() {
-            let p = e.path();
-            if p.is_dir() && file_stem(&p).eq_ignore_ascii_case(name) {
-                out.push(p);
-            }
-        }
-    }
-    out
 }
 
 pub(super) fn collect_files(root: &Path, out: &mut Vec<PathBuf>) {

@@ -40,6 +40,7 @@ _DEPR = (
     "The v1 eight-call model-build surface is deprecated (window: two minors) in "
     "favour of the declarative modelling API v2 — see peteksim modelling-api-v2. "
 )
+_DEFAULT_OUTLINE = object()
 
 
 def _both(spec_val, legacy: Dict[str, Any], call: str) -> None:
@@ -137,7 +138,7 @@ class GridGeometry:
 
     def build(self, horizons: Horizons, subzones: Optional[Subzones] = None,
               layering: Optional[Layering] = None, collapse_negative: bool = True,
-              outline: str = "ModelEdge", min_thickness_m: float = 0.0,
+              outline=_DEFAULT_OUTLINE, min_thickness_m: float = 0.0,
               ties: Optional[TieSettings] = None,
               gridding: Optional[Gridding] = None) -> "Grid":
         """Freeze the geometry + structure specs into a ``Grid`` builder. Resolves
@@ -146,8 +147,9 @@ class GridGeometry:
         if not isinstance(horizons, Horizons):
             raise TypeError("geom.build(hz, ...): hz must be a ps.Horizons spec")
         _validate_horizons(self.project._inner, horizons)
+        resolved_outline = None if outline is _DEFAULT_OUTLINE else outline
         return Grid(self, horizons, subzones, layering, bool(collapse_negative),
-                    outline, float(min_thickness_m),
+                    resolved_outline, float(min_thickness_m),
                     ties or horizons.ties, gridding or horizons.gridding)
 
 

@@ -35,6 +35,87 @@ from synthetic_tree import (  # noqa: E402
 )
 
 
+def test_public_api_lock():
+    assert sorted(ps.__all__) == [
+        "ApplyError",
+        "AssetSpec",
+        "CollocatedTrend",
+        "Contacts",
+        "Crossplot",
+        "Dist",
+        "Distribution",
+        "Extrapolation",
+        "Framework",
+        "GaussianSpec",
+        "Gridding",
+        "Horizons",
+        "Inventory",
+        "Layering",
+        "Layers",
+        "LoadSettings",
+        "Mc",
+        "McSettings",
+        "Model",
+        "ModelResult",
+        "NotYetSupported",
+        "PickSpread",
+        "Project",
+        "Prop",
+        "Propagate",
+        "Property",
+        "Props",
+        "Refined",
+        "Run",
+        "Spec",
+        "StaticModel",
+        "Subzones",
+        "Surface",
+        "TieSettings",
+        "Tops",
+        "TopsPick",
+        "Tornado",
+        "Trend",
+        "Uncertainty",
+        "Variogram",
+        "Vgm",
+        "ViewSettings",
+        "Wells",
+        "ZonedUncertainty",
+        "aggregate",
+        "collocated",
+        "decay_to_flat",
+        "dist",
+        "distribution_bundle",
+        "exponential",
+        "fit_variogram",
+        "flat",
+        "gaussian",
+        "gaussian_vgm",
+        "hz",
+        "layers",
+        "level_shift",
+        "lognormal",
+        "nearest",
+        "normal",
+        "pick_spread",
+        "registered_specs",
+        "resimulate",
+        "run_box_model",
+        "shift",
+        "spec_from_dict",
+        "spherical",
+        "splits",
+        "synth_asset",
+        "triangular",
+        "truncated_normal",
+        "uniform",
+        "variogram",
+        "version",
+        "view",
+        "zone",
+    ]
+
+
 @pytest.fixture(scope="module")
 def tree() -> Path:
     return build_tree(tempfile.mkdtemp(prefix="facade-test-"))
@@ -99,6 +180,17 @@ def test_framework_tie_report(proj):
     # signs (and the exact-tie residuals above) would break loudly.
     assert all(t["surface_m"] > 1000.0 for t in tie), tie
     assert all(t["pick_m"] > 1000.0 for t in tie), tie
+
+
+def test_explicit_missing_outline_lists_loaded_polygons(proj):
+    with pytest.raises(ValueError, match="NoSuchOutline.*outline"):
+        proj.framework(horizons=["TopReservoir", "BaseReservoir"], outline="NoSuchOutline")
+
+
+def test_default_outline_miss_falls_back_to_bbox(proj):
+    fw = proj.framework(horizons=["TopReservoir", "BaseReservoir"])
+    grid = fw.build_grid()
+    assert grid.property_names() == []
 
 
 def test_framework_zones_layering(proj):

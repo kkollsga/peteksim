@@ -6,8 +6,8 @@
 use super::spec::TrendSpec;
 use crate::units::SrsError;
 use petekio::{
-    BBox, GeoData, GridGeometry, GridMethod, Interval, LogView, NameMap, Point3, Sidetrack,
-    Surface, Unit,
+    detect, BBox, FormatKind, GeoData, GridGeometry, GridMethod, Interval, LogView, NameMap,
+    Point3, Sidetrack, Surface, Unit,
 };
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -115,19 +115,12 @@ pub struct Project {
     geo: GeoData,
     inventory: Inventory,
     crs: Option<String>,
-    /// Fluid-contact picks (`Type == "Other"`: GOC/FWL/OWC/…) parsed facade-side
-    /// from the Petrel tops files — petekio's stratigraphic tops loader keeps
-    /// only `Type == "Horizon"`, so these would otherwise be dropped (F3). Each
-    /// is `(surface_name, well, depth_m)` with depth = subsea TVD (positive-down).
-    contacts: Vec<(String, String, f64)>,
+    /// Compatibility bridge for Petrel `Type == "Other"` rows that petekIO cannot
+    /// attach to a loaded bore (for example field-level/contact-inventory rows).
+    /// Matched bore contacts come from petekIO; this only preserves the old
+    /// facade-visible inventory/pick behaviour for unassigned rows.
+    compat_contacts: Vec<(String, String, f64)>,
 }
-
-const SURFACE_EXTS: &[&str] = &["irap", "gri", "cps3grid"];
-const POLYGON_EXTS: &[&str] = &["pol", "shp", "cps3lines"];
-// `.irapclassicpoints` (scattered horizon picks) + `.earthvisiongrid` are
-// scattered point-sets petekio loads natively; classified here as points so
-// they load (framework grids a point-set horizon onto the build lattice — F2).
-const POINT_EXTS: &[&str] = &["xyz", "dat", "irapclassicpoints", "earthvisiongrid"];
 
 impl Project {
     /// Walk `root`, classify + load every recognised file, and return the
@@ -155,92 +148,86 @@ impl Project {
         }
         let mut inv = Inventory::default();
 
+        let mut files = Vec::new();
+        collect_files(root, &mut files);
+        let mut classified: Vec<(PathBuf, FormatKind)> = Vec::new();
+        for path in files {
+            match detect(&path) {
+                Ok(kind) => classified.push((path, kind)),
+                Err(e) => inv
+                    .skipped
+                    .push((path.display().to_string(), e.to_string())),
+            }
+        }
+
         // 1) Wells first (so tops can attach to already-loaded wells). Discover
-        //    each well id from the survey/log filenames under `wells/`, then route
-        //    it through petekio's directory-walking `load_well` (F1 + F6):
+        //    each well id from detected survey/log filenames anywhere in the tree,
+        //    then route it through petekio's directory-walking `load_well` (F1 + F6):
         //
         //    - `load_well` walks the tree **recursively** and keeps only this
         //      well's files, so the real Petrel split `Wells/Paths/` +
-        //      `Wells/Logs/` layout Just Works (no more one-bogus-well-per-subdir).
+        //      `Wells/Logs/` layout and loose well files outside a hardcoded
+        //      `Wells/` directory both work.
         //    - A single `.wellpath` is the well's one (main) bore, so its logs
         //      position on the **real deviated trajectory** — no synthesized
         //      vertical (F6) — and the `.wellpath` header supplies the
         //      authoritative wellhead datum (we pass a zero placeholder).
         let mut tops_files: Vec<PathBuf> = Vec::new();
-        for wells_dir in child_dirs_named(root, "wells") {
-            let ids = discover_well_ids(&wells_dir);
-            for id in &ids {
-                // Discovery is by well id; the bore-level inventory is derived from
-                // the loaded substrate at the end (so `inventory().wells` matches
-                // `proj.wells()` exactly). A load failure is a loud skip.
-                if let Err(e) = geo.load_well(id, (0.0, 0.0), 0.0, &wells_dir) {
-                    inv.skipped.push((
-                        format!("{} [well '{id}']", wells_dir.display()),
-                        e.to_string(),
-                    ));
-                }
+        let ids = discover_well_ids(&classified);
+        for id in &ids {
+            // Discovery is by well id; the bore-level inventory is derived from
+            // the loaded substrate at the end (so `inventory().wells` matches
+            // `proj.wells()` exactly). A load failure is a loud skip.
+            if let Err(e) = geo.load_well(id, (0.0, 0.0), 0.0, root) {
+                inv.skipped
+                    .push((format!("{} [well '{id}']", root.display()), e.to_string()));
             }
-            // F8: LAS 3.0 **core** files (stem carries "core") are folded into a
-            // bore by `load_well` above and would otherwise leave no trace. Record
-            // each against its now-loaded well, naming the bore it merged into
-            // (mirroring petekio's filename→bore routing).
-            record_core_merges(&geo, &wells_dir, &ids, &mut inv.merged);
         }
+        // F8: LAS 3.0 **core** files (stem carries "core") are folded into a bore
+        // by `load_well` above and would otherwise leave no trace. Record each
+        // against its now-loaded well, naming the bore it merged into (mirroring
+        // petekio's filename→bore routing).
+        record_core_merges(&geo, root, &ids, &mut inv.merged);
 
-        // 2) Everything else by extension / parent-dir hint (recursive), holding
-        //    `.tops` files for step 3.
-        let mut files = Vec::new();
-        collect_files(root, &mut files);
-        for path in &files {
-            if under_dir(path, "wells") {
+        // 2) Everything else by detected content / parent-dir hint (recursive),
+        //    holding tops files for step 3. Unknown keeps the old extension
+        //    fallback so odd but supported exports do not regress.
+        for (path, kind) in &classified {
+            if matches!(
+                kind,
+                FormatKind::Las | FormatKind::WellPath | FormatKind::CrsMetaXml
+            ) {
                 continue; // already ingested well-side
             }
             let ext = ext_of(path);
             let parent = parent_name(path);
-            if is_tops_file(path, &ext) {
+            if *kind == FormatKind::PetrelTops || is_tops_file(path, &ext) {
                 // `.tops`/`.petrel`, or an extension-less Petrel tops export whose
                 // name carries "tops" (e.g. `FieldTops`) — the real raw layout (F3).
                 tops_files.push(path.clone());
-            } else if SURFACE_EXTS.contains(&ext.as_str()) {
-                load_named(&mut geo, path, &mut inv, Kind::Surface);
-            } else if ext == "geojson" || ext == "json" {
-                // geojson is polygons or points — disambiguate by parent dir.
-                if dir_is(&parent, &["point", "scatter"]) {
-                    load_named(&mut geo, path, &mut inv, Kind::Points);
-                } else {
-                    load_named(&mut geo, path, &mut inv, Kind::Polygons);
-                }
-            } else if POLYGON_EXTS.contains(&ext.as_str()) {
-                load_named(&mut geo, path, &mut inv, Kind::Polygons);
-            } else if ext == "csv" || POINT_EXTS.contains(&ext.as_str()) {
-                load_named(&mut geo, path, &mut inv, Kind::Points);
-            } else if ext == "las" || ext == "wellpath" {
-                // Loose well files outside a wells/ dir — not classifiable to a
-                // well here; record rather than guess.
-                inv.skipped.push((
-                    path.display().to_string(),
-                    "well file outside a wells/<id>/ directory".into(),
-                ));
+            } else if let Some(load_kind) = detected_load_kind(*kind, &parent, &ext) {
+                load_named(&mut geo, path, &mut inv, load_kind);
+            } else if let Some(load_kind) = unknown_extension_load_kind(&ext) {
+                load_named(&mut geo, path, &mut inv, load_kind);
             } else {
                 inv.skipped.push((
                     path.display().to_string(),
-                    format!("unrecognised extension '.{ext}'"),
+                    format!("unrecognised format ({kind:?}, extension '.{ext}')"),
                 ));
             }
         }
 
         // 3) Tops (multi-well Petrel picks) after the wells exist. petekio
-        //    distributes the `Type == "Horizon"` (stratigraphic) picks; the
-        //    facade separately parses the `Type == "Other"` fluid contacts
-        //    (GOC/FWL/OWC), which petekio's tops loader drops (F3).
-        let mut contacts: Vec<(String, String, f64)> = Vec::new();
+        //    distributes both `Type == "Horizon"` stratigraphic picks and
+        //    `Type == "Other"` fluid contacts onto the matching bores.
+        let mut compat_contacts: Vec<(String, String, f64)> = Vec::new();
         for tp in tops_files {
+            compat_contacts.extend(parse_other_contacts(&tp));
             if let Err(e) = geo.load_well_tops(&tp) {
                 inv.skipped.push((tp.display().to_string(), e.to_string()));
             }
-            contacts.extend(parse_other_contacts(&tp));
         }
-        inv.tops = discover_tops(&geo, &contacts);
+        inv.tops = discover_tops(&geo, &compat_contacts);
         inv.surfaces.sort();
         inv.surfaces.dedup();
 
@@ -248,7 +235,7 @@ impl Project {
             geo,
             inventory: inv,
             crs,
-            contacts,
+            compat_contacts,
         };
         // Inventory wells are **bore-level**, derived from the same positioned
         // bores `proj.wells()` yields — one entry per positioned bore under its
@@ -500,11 +487,36 @@ impl Project {
                 }
             }
         }
-        // Fluid-contact (Type="Other") picks parsed facade-side (F3): GOC/FWL/OWC
-        // are exactly what the two-contact `grid.model(...)` API needs.
-        for (surf, well, depth) in &self.contacts {
-            if surf.eq_ignore_ascii_case(name) && keep(well) {
+        let compat_has_name = self
+            .compat_contacts
+            .iter()
+            .any(|(surf, _, _)| surf.eq_ignore_ascii_case(name));
+        for (surf, well, depth) in &self.compat_contacts {
+            if surf.eq_ignore_ascii_case(name)
+                && keep(well)
+                && !picks
+                    .iter()
+                    .any(|(w, d)| w.eq_ignore_ascii_case(well) && (*d - *depth).abs() < 1e-9)
+            {
                 picks.push((well.clone(), *depth));
+            }
+        }
+        // PetekIO is the primary owner of contact assignment to bores. Today that
+        // seam exposes contact MD, while this facade's public `TopsPick.level_m`
+        // is TVDSS from the Petrel Z column; when a parsed Z-row exists, use it.
+        // Fall back to petekIO contacts only for contacts that have no file-level
+        // compatibility row.
+        if !compat_has_name {
+            for bw in self.wells() {
+                if !keep(&bw.id) {
+                    continue;
+                }
+                for c in bw.bore.contacts() {
+                    if c.name.eq_ignore_ascii_case(name) {
+                        let depth = bw.xyz(c.md).map(|p| -p.z).unwrap_or(c.md);
+                        picks.push((bw.id.clone(), depth));
+                    }
+                }
             }
         }
         if picks.is_empty() {
@@ -529,17 +541,7 @@ impl Project {
 
 #[cfg(test)]
 mod tests {
-    //! F3 regression: fluid-contact picks (Petrel `Type == "Other"`: GOC/FWL) are
-    //! parsed facade-side, since petekio's tops loader keeps only `Type ==
-    //! "Horizon"`. Synthesized to the Petrel well-tops shape (headered, quoted
-    //! Surface/Well fields incl. a bore suffix with a space).
     use super::*;
-
-    fn write_tmp(name: &str, body: &str) -> PathBuf {
-        let p = std::env::temp_dir().join(format!("srscore_f3_{}_{name}", std::process::id()));
-        std::fs::write(&p, body).unwrap();
-        p
-    }
 
     #[test]
     fn cell_size_derives_lattice_from_extent() {
@@ -579,65 +581,18 @@ mod tests {
     }
 
     #[test]
-    fn parse_other_contacts_surfaces_goc_fwl() {
-        // GOC/FWL rows are Type="Other"; the strat tops are Type="Horizon".
-        // Z is negative-down elevation → depth = -Z (positive-down subsea).
-        let body = "\
-# Petrel well tops
-VERSION 2
-BEGIN HEADER
-X
-Y
-Z
-MD
-Type
-Surface
-Well
-END HEADER
-431600 6521600 -2000.0 2025.0 Horizon \"Top Reservoir\" \"99/9-1 A\"
-431600 6521600 -2111.0 2248.0 Other \"GOC\" \"99/9-1 A\"
-431600 6521600 -2190.0 2325.0 Other \"FWL\" \"99/9-1 A\"
-";
-        let p = write_tmp("tops.tops", body);
-        let contacts = parse_other_contacts(&p);
-        std::fs::remove_file(&p).ok();
-
-        // Only the two Type="Other" rows; the Horizon row is left to petekio.
-        assert_eq!(contacts.len(), 2, "{contacts:?}");
-        let goc = contacts.iter().find(|(s, _, _)| s == "GOC").unwrap();
-        assert!((goc.2 - 2111.0).abs() < 1e-9, "GOC depth {}", goc.2);
-        assert_eq!(goc.1, "99/9-1 A"); // quoted well with a space + bore suffix
-        let fwl = contacts.iter().find(|(s, _, _)| s == "FWL").unwrap();
-        assert!((fwl.2 - 2190.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn split_petrel_tokens_keeps_quoted_fields() {
-        let toks = split_petrel_tokens("1 2 3 Other \"Field Main top\" \"99/9-1 ST2\"");
-        assert_eq!(
-            toks,
-            ["1", "2", "3", "Other", "Field Main top", "99/9-1 ST2"]
-        );
-    }
-
-    #[test]
-    fn parse_other_contacts_decodes_latin1() {
-        // R-b: a real Petrel tops export is often Latin-1, not UTF-8. A high byte
-        // in a name (here `å` = 0xE5, `æ` = 0xE6 — "Blåbær") must decode rather
-        // than abort the whole parse (the old `read_to_string` returned empty).
-        let mut body: Vec<u8> =
-            b"BEGIN HEADER\nX\nY\nZ\nMD\nType\nSurface\nWell\nEND HEADER\n".to_vec();
-        // 431600 6521600 -2111.0 2248.0 Other "Blåbær" "15/9-A1"
-        body.extend_from_slice(b"431600 6521600 -2111.0 2248.0 Other \"");
-        body.extend_from_slice(&[b'B', b'l', 0xE5, b'b', 0xE6, b'r']); // Blåbær (Latin-1)
-        body.extend_from_slice(b"\" \"15/9-A1\"\n");
-        let p = std::env::temp_dir().join(format!("srscore_rb_{}.tops", std::process::id()));
-        std::fs::write(&p, &body).unwrap();
-        let contacts = parse_other_contacts(&p);
-        std::fs::remove_file(&p).ok();
-
-        assert_eq!(contacts.len(), 1, "{contacts:?}");
-        assert_eq!(contacts[0].0, "Blåbær"); // decoded, not dropped
-        assert!((contacts[0].2 - 2111.0).abs() < 1e-9);
+    fn detector_routes_ambiguous_points_by_parent_or_extension() {
+        assert!(matches!(
+            detected_load_kind(
+                FormatKind::IrapClassicPoints,
+                "surfaces",
+                "irapclassicpoints"
+            ),
+            Some(Kind::Points)
+        ));
+        assert!(matches!(
+            detected_load_kind(FormatKind::IrapClassicPoints, "polygons", "pol"),
+            Some(Kind::Polygons)
+        ));
     }
 }

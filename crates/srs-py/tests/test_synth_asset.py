@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import math
 import signal
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -66,6 +67,23 @@ def test_ingest_zero_non_noise_skips(asset):
     # Type="Other" contacts parsed (GOC/FWL/OWC) + the Latin-1 name row decoded.
     assert {"GOC", "FWL", "OWC"} <= set(inv.tops)
     assert any("Blåbær" in t for t in inv.tops), inv.tops
+
+
+def test_project_load_detects_wells_outside_wells_dir(tmp_path):
+    man = ps.synth_asset(tmp_path / "asset", seed=SEED, ncol=13, n_wells=4)
+    root = Path(man["root"])
+    loose = root / "LooseBores"
+    loose.mkdir()
+    for src in sorted((root / "Wells").rglob("*")):
+        if src.is_file():
+            shutil.move(str(src), loose / src.name)
+    shutil.rmtree(root / "Wells")
+
+    proj = ps.Project.load(man["root"], crs=man["crs"], aliases=man["aliases"])
+    inv = proj.inventory()
+    assert set(man["well_ids"]) <= set(inv.wells)
+    assert {"GOC", "FWL", "OWC"} <= set(inv.tops)
+    assert inv.skipped == [], inv.skipped
 
 
 # --- (2) net-conditioned zone stats recover the planted targets --------------
