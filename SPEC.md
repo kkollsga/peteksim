@@ -54,9 +54,9 @@ were extracted to petekStatic (2026-07-01) and the volumetrics/uncertainty half
 followed (2026-07-03), consumed here across the repo seam via path deps.
 
 ```
-srs-units    the workspace error type (SrsError). petekstatic-error composes in
-             via #[from]; it reaches petekio::GeoError transitively, so `?` chains
-             DATA -> GEOMODEL -> SIM and source() reaches the origin.
+srs-units    the workspace error type (SrsError). petekstatic::error::StaticError
+             composes in via #[from]; it reaches petekio::GeoError transitively,
+             so `?` chains DATA -> GEOMODEL -> SIM and source() reaches the origin.
 srs-pvt      PVT correlations + FVF handling — the dynamic/engineering core.
 srs-core     the product facade: facade::{Project, Framework, StaticGrid, Model,
              uncertainty}; the analytic box path (run_box_model); the thin
@@ -66,10 +66,11 @@ srs-py       PyO3 / maturin bindings + the v2 spec facade (python/peteksim/**) +
              thin view()/save_view glue over petektools.viewer.
 ```
 
-Consumed across the seam (path deps, not built here): `../petekStatic/crates/*`
-(srs-grid · srs-gridder · srs-wireframe · srs-petro · srs-data · srs-volumetrics ·
-srs-uncertainty · srs-model · petekstatic-error), `../petekTools` (petektools), and
-the published `petekio` DATA crate.
+Consumed across the seam: the published `petekstatic` GEOMODEL crate (historical
+layers `srs-grid` · `srs-gridder` · `srs-wireframe` · `srs-petro` · `srs-data` ·
+`srs-volumetrics` · `srs-uncertainty` · `srs-model` live there as modules),
+`petektools`, and the published `petekio` DATA crate. Local development can patch
+those crates to sibling checkouts.
 
 ## 3. Split the elephant 🐘
 

@@ -10,9 +10,9 @@ is SYNTHETIC and seeded — an arbitrary fictional study area, no dataset conten
 
 It then drives the eight-call facade with ``fw.set_zonation([...])`` to build the
 zoned StaticModel, reads per-zone volumes (``in_place_by_zone``) + per-zone stats
-(``zone_stats``), runs a whole-field Monte Carlo for the P-curve/tornado charts
-(MC over a zoned stack is not yet wired), and writes a self-contained viewer HTML
-the Playwright harness screenshots (volume / crest section / map).
+(``zone_stats``), runs zoned Monte Carlo for the P-curve/distribution charts, and
+writes a self-contained viewer HTML the Playwright harness screenshots (volume /
+crest section / map).
 
     VIRTUAL_ENV="$PWD/.venv-srs" .venv-srs/bin/maturin develop -m crates/srs-py/Cargo.toml
     .venv-srs/bin/python examples/dome_demo.py            # build + save_view HTML
@@ -324,9 +324,9 @@ def _build_zoned(proj, ncol: int):
 
 
 def _whole_field_mc(proj):
-    """A whole-field (top→base, single-zone) build + MC for the P-curve/tornado
-    charts — MC over a zoned stack is not yet wired, so the field view carries the
-    uncertainty. Returns the Uncertainty result."""
+    """A whole-field (top→base, single-zone) build + MC for the flat tornado chart.
+    The main zoned model uses ``zoned_uncertainty``; this helper keeps the demo's
+    flat sensitivity chart available too. Returns the Uncertainty result."""
     import peteksim as ps
 
     surfaces = build_surfaces(41)
