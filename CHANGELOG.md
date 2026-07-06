@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-06
+
 ### Changed
 
 - **Consume the fortified petekIO/petekTools foundations.** Project ingest now
@@ -23,12 +25,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with the loaded polygon inventory. An omitted outline still tries `ModelEdge`,
   then falls back to the framework bbox with a visible warning if `ModelEdge` is
   absent.
-
-### Development
-
-- Until the next family release, this unreleased work requires local sibling
-  checkouts carrying petekIO `3963041` and a Python environment with petekTools
-  `b4598e3` installed.
 
 ## [0.1.1] - 2026-07-05
 

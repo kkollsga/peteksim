@@ -723,7 +723,7 @@ checksum = "4ec91767ecc0a0bbe558ce8c9da33c068066c57ecc8bb8477ef8c1ad3ef77c27"
 
 [[package]]
 name = "petekio"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "bincode",
  "csv",
@@ -741,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "peteksim"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64",
  "petekio",
@@ -756,9 +756,9 @@ dependencies = [
 
 [[package]]
 name = "petekstatic"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a55c9b09db6a5877629cce95cb1eaf5210fe7bd5de2cd86f5be3bba59c757444"
+checksum = "9225d8480c98470ae78a4f4a52e7be8a6e6e30148250381db1d794ab4c495bc0"
 dependencies = [
  "base64",
  "ndarray",
@@ -774,9 +774,9 @@ dependencies = [
 
 [[package]]
 name = "petektools"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "081b42ba0c35a66bd4db680575acf54197f5a13e0843e5bf7d086734702e4b01"
+checksum = "a581b2363699ece5d2f8104690440ad9dc07eec6e0c39f0fa8b3d1de49e97ccc"
 dependencies = [
  "bytemuck",
  "memmap2",
@@ -1256,7 +1256,7 @@ dependencies = [
 
 [[package]]
 name = "srs-py"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "peteksim",
  "pyo3",

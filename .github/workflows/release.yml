@@ -1,16 +1,15 @@
 name: Release
 
-# Tag-triggered PyPI publish (v* tags) via OIDC trusted publishing — no secret.
+# Tag-triggered crates.io + PyPI publish (v* tags). PyPI uses OIDC trusted
+# publishing; crates.io uses the CARGO_REGISTRY_TOKEN repo secret.
 # The `peteksim` wheel is built from crates/srs-py (its pyproject.toml). The
-# crates.io publish of the consolidated `peteksim` library crate is done from the
-# local runbook (ordered, cross-repo deps), not here.
 #
 # Configure a pending publisher on PyPI: project `peteksim`, owner kkollsga, repo
 # peteksim, workflow release.yml, environment pypi.
 #
 # NOTE: before pushing a v* tag, the sibling path dep on `petekstatic`
 # (`../petekStatic` in the root Cargo.toml [workspace.dependencies]) must resolve
-# from crates.io — its version pin (0.1.0) does; by release time the upstream
+# from crates.io — its version pin (0.1.2) does; by release time the upstream
 # family crates are all published so the registry pins resolve on the CI runner.
 on:
   push:
@@ -32,12 +31,46 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+      - name: require v* tag
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*) ;;
+            *) echo "release workflow must run from a v* tag, got $GITHUB_REF" >&2; exit 1 ;;
+          esac
+      - name: verify tag matches Cargo.toml
+        run: |
+          VER=$(cargo metadata --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name=="peteksim") | .version')
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$VER" != "$TAG" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match Cargo version ${VER}" >&2
+            exit 1
+          fi
       - name: fmt
         run: cargo fmt --all --check
       - name: clippy (warnings = errors)
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: test
         run: cargo test --workspace
+
+  publish-crate:
+    name: crates.io
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish to crates.io (skip if this version is already published)
+        run: |
+          VER=$(cargo metadata --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name=="peteksim") | .version')
+          if curl -fsS -H "User-Agent: peteksim-ci" \
+               "https://crates.io/api/v1/crates/peteksim/$VER" \
+               | jq -e '.version.num' >/dev/null 2>&1; then
+            echo "peteksim $VER already on crates.io; skipping publish"
+          else
+            cargo publish -p peteksim --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          fi
 
   sdist:
     name: build sdist
@@ -95,3 +128,15 @@ jobs:
           path: dist
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: GitHub Release
+    needs: [publish-crate, publish-pypi]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
