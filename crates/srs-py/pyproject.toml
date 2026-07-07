@@ -26,7 +26,7 @@ dynamic = ["version"]
 # Floor 0.2.4: current release-train toolkit floor, including synth_asset.
 # petekstatic owns the canonical static property workflow; peteksim re-exports a
 # narrow compatibility shim to those APIs instead of carrying a second workflow.
-dependencies = ["petektools>=0.2.4", "petekio>=0.3.3", "petekstatic>=0.1.6"]
+dependencies = ["petektools>=0.2.4", "petekio>=0.3.4", "petekstatic>=0.1.7"]
 
 [project.urls]
 # The petekSuite site is the canonical docs home for the whole family.
