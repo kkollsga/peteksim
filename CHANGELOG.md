@@ -4,6 +4,20 @@ All notable changes to petekSim are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-07-07
+
+### Changed
+
+- Removed public project-loading/project-handling exports from `peteksim`; the
+  project container and loading API now live in `petekio`.
+- Updated docs and tests so examples use `petekio.Project.load(...)` and
+  `project.wells.logs` instead of project handling through petekSim.
+- Updated release-train dependency floors to `petekio 0.3.3`,
+  `petektools 0.2.4`, and `petekstatic 0.1.6`; the Python wheel requires
+  `petektools>=0.2.4`, `petekio>=0.3.3`, and `petekstatic>=0.1.6`.
+- Updated CI and release workflows to current action versions and the
+  Actions-owned release flow.
+
 ## [0.1.3] - 2026-07-07
 
 ### Changed
@@ -73,8 +87,8 @@ a default.
 
 - **Specs applied at explicit moments.** A model is built from immutable, declarative
   **spec** values that say WHAT (`Horizons`, `Subzones`, `Layering`, `Contacts`,
-  `Props`, `Mc`) or HOW (`TieSettings`, `Gridding`, `Run`, `LoadSettings`,
-  `ViewSettings`). A spec holds **names**, not project objects — so it is
+  `Props`, `Mc`) or HOW (`TieSettings`, `Gridding`, `Run`, `ViewSettings`).
+  A spec holds **names**, not project objects — so it is
   project-independent, reusable across re-exports and synthetic assets. It is applied
   at three explicit moments: `proj.grid_geometry(...)` → `geom.build(...)` →
   `grid.model(...)` → `model.zoned_uncertainty(...)`.

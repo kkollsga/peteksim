@@ -95,7 +95,7 @@ The product surface is a **declarative spec layer applied at explicit moments**,
 an imperative call chain. A **spec** is an immutable value:
 
 - It says **WHAT** (`Horizons`, `Subzones`, `Layering`, `Contacts`, `Props`, `Mc`)
-  or **HOW** (`TieSettings`, `Gridding`, `Run`, `LoadSettings`, `ViewSettings`).
+  or **HOW** (`TieSettings`, `Gridding`, `Run`, `ViewSettings`).
 - It **holds names, not project objects** — resolved against a loaded project only at
   the apply moment (`geom.build`, `grid.model`, `model.zoned_uncertainty`), so a
   spec is project-independent and reusable across re-exports and synthetic assets.

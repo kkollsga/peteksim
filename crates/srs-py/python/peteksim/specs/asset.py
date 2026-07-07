@@ -1,20 +1,20 @@
 """Asset + chart specs.
 
-``AssetSpec`` composes a whole modelling scenario (load + structure + props + mc)
-into ONE durable value — a scenario is a savable file. ``ChartSpec`` (Crossplot /
-Tornado / Distribution) names WHAT data a chart shows (peteksim composes it);
-petekTools renders it.
+``AssetSpec`` composes a modelling scenario (structure + props + mc)
+into ONE durable value — a scenario is a savable file. ``ChartSpec`` (Tornado /
+Distribution) names WHAT data a chart shows (peteksim composes it); petekTools
+renders it.
 """
 
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Optional, Tuple
+from typing import Optional
 
 from .base import Spec, render_table, spec
 from .mc import Mc
 from .props import Props
-from .settings import Gridding, LoadSettings, Run, TieSettings, ViewSettings
+from .settings import Gridding, Run, TieSettings, ViewSettings
 from .structure import Contacts, Horizons, Layering, Subzones
 
 
@@ -27,7 +27,6 @@ class AssetSpec(Spec):
 
     _tag = "AssetSpec"
     name: str = ""
-    load: Optional[LoadSettings] = None
     horizons: Optional[Horizons] = None
     subzones: Optional[Subzones] = None
     layering: Optional[Layering] = None
@@ -46,26 +45,6 @@ class AssetSpec(Spec):
 
 
 # --- chart specs ------------------------------------------------------------
-
-@spec
-@dataclasses.dataclass(frozen=True, eq=False, repr=False)
-class Crossplot(Spec):
-    """A scatter chart (``ps.Crossplot(x="PHIE", y="PERM", y_log=True)``) — applied
-    on the project (``proj.crossplot_bundle``)."""
-
-    _tag = "Crossplot"
-    x: str = ""
-    y: str = ""
-    wells: Tuple[str, ...] = ()
-    color_by: str = "well"
-    x_log: bool = False
-    y_log: bool = False
-    regression: bool = False
-
-    def bundle(self, project_core):
-        return project_core.crossplot_bundle(
-            self.x, self.y, list(self.wells) or None, self.color_by,
-            self.x_log, self.y_log, self.regression)
 
 
 @spec
@@ -102,12 +81,6 @@ class Distribution(Spec):
             return unc.distribution_bundle(self.gas, self.name)
         except TypeError:
             return unc.distribution_bundle(self.gas, None, self.name)
-
-
-def crossplot(x: str, y: str, wells: Optional[Any] = None, color_by: str = "well",
-              x_log: bool = False, y_log: bool = False, regression: bool = False) -> Crossplot:
-    return Crossplot(x=x, y=y, wells=tuple(wells or ()), color_by=color_by,
-                     x_log=x_log, y_log=y_log, regression=regression)
 
 
 def tornado(base: Optional[float] = None, units: str = "MSm³", fold_count: int = 8) -> Tornado:

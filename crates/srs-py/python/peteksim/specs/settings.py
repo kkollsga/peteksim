@@ -1,13 +1,12 @@
 """Settings specs — the HOW objects: ``TieSettings``, ``Gridding`` (+ the
-extrapolation policy), ``Run`` (resources), ``LoadSettings`` (ingest), and
-``ViewSettings`` (render). Attached to a spec or an application call; per-row/
-per-call overrides allowed.
+extrapolation policy), ``Run`` (resources), and ``ViewSettings`` (render).
+Attached to a spec or an application call; per-row/per-call overrides allowed.
 """
 
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional
 
 from .base import Spec, spec
 
@@ -113,33 +112,6 @@ class Run(Spec):
 
 def Run_factory(memory_budget: Optional[int] = None, workers: int = 0) -> Run:
     return Run(memory_budget=memory_budget, workers=int(workers))
-
-
-# --- load settings ----------------------------------------------------------
-
-@spec
-@dataclasses.dataclass(frozen=True, eq=False, repr=False)
-class LoadSettings(Spec):
-    """Ingest settings (``ps.LoadSettings(crs="ED50 / UTM 31N", aliases={...})``).
-    ``crs`` is a provenance label; ``aliases`` canonicalise log mnemonics at load."""
-
-    _tag = "LoadSettings"
-    crs: Optional[str] = None
-    aliases: Tuple[Tuple[str, str], ...] = ()
-
-    @classmethod
-    def make(cls, crs: Optional[str] = None,
-             aliases: Optional[Dict[str, str]] = None) -> "LoadSettings":
-        pairs = tuple((str(k), str(v)) for k, v in (aliases or {}).items())
-        return cls(crs=crs, aliases=pairs)
-
-    def alias_dict(self) -> Dict[str, str]:
-        return {k: v for k, v in self.aliases}
-
-
-def LoadSettings_factory(crs: Optional[str] = None,
-                         aliases: Optional[Dict[str, str]] = None) -> LoadSettings:
-    return LoadSettings.make(crs=crs, aliases=aliases)
 
 
 # --- view settings ----------------------------------------------------------

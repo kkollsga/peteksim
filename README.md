@@ -55,62 +55,41 @@ for existing declarative-model scenarios, but now emit deprecation guidance. New
 property-workflow code should use the petekStatic API directly, either through
 `petekstatic` or the petekSim shim.
 
-## First volumes — a STOIIP P-curve in a handful of calls
+## Project-backed static models
 
-The primary surface is the **declarative spec API**. A **spec** is an immutable
-value that says WHAT (`Horizons`, `Subzones`, `Layering`, `Contacts`, `Props`,
-`Mc`) or HOW (`TieSettings`, `Gridding`, `Run`); it holds **names**, not project
-objects, resolved at apply time — so a spec is project-independent, reusable across
-re-exports and synthetic assets, serializes to/from a dict (a scenario is a savable
-file), compares by value, derives with `.replace()`, and pretty-prints as its
-domain table. **Applications are explicit moments** (`geom.build`, `grid.model`,
-`model.zoned_uncertainty`); errors at apply are loud, naming both the missing
-project object and the spec entry.
+petekSim no longer owns project loading. Load raw exports through `petekio`, then
+build static structure/properties/volumes through `petekstatic`. petekSim remains
+the dynamic/appraisal product layer, plus standalone analytic helpers such as
+`run_box_model`.
 
 ```python
+import petekio as pio
+import petekstatic as pst
 import peteksim as ps
 
-proj = ps.Project.load("Data/", settings=ps.LoadSettings(crs="...", aliases={"PHIT": "PORO"}))
-
-# Declarative structure + settings (names, not objects).
-hz = ps.Horizons(
-    ps.hz("TopReservoir", tie="TopReservoir"),
-    ps.hz("BaseReservoir"),
-    zones=["Reservoir"],
-    ties=ps.TieSettings(method="convergent"),
-    gridding=ps.Gridding(collapse=True),
-)
-lay   = ps.Layering(nk=8)
-con   = ps.Contacts({"Reservoir": dict(goc=2700.0, fwl=2750.0)})
-props = ps.Props(
-    ps.Prop("PORO", net_only=True,
-            propagate=ps.Propagate(variogram=ps.variogram("spherical", 800.0), seed=1)),
-    ps.Prop("NTG",
-            propagate=ps.Propagate(variogram=ps.variogram("spherical", 800.0), seed=2,
-                                   trend=ps.collocated("TopReservoir", corr=0.4))),
+project = pio.Project.load(
+    "Data/",
+    settings=pio.LoadSettings(
+        crs="EPSG:32631",
+        aliases={"PHIE": ["PHI", "PHIE"], "NetSand": ["NTG", "NETSAND"]},
+    ),
 )
 
-# The explicit application moments.
-geom  = proj.grid_geometry(cell=(50.0, 50.0), orient=0)
-grid  = geom.build(hz, layering=lay, collapse_negative=True)
-model = grid.model(props, con, fluid="oil", fvf=1.30, gas_fvf=0.005, wells=proj.wells())
-mc    = model.zoned_uncertainty(ps.Mc(porosity=0.02, contacts=5.0, n=10_000, seed=42))
-
-mc.total["stoiip"]   # {p90, p50, p10, mean, *_msm3, samples} — the P-curve
-mc.zones             # per-zone breakdown (a contactless zone contributes zero HC)
-```
-
-**Scenarios are derived specs** — same geometry, N specs → N models:
-
-```python
-deep    = con.replace("Reservoir", goc=2700.0, fwl=2780.0)
-model_b = grid.model(props, deep, fluid="oil", fvf=1.30)
+logs = project.wells.logs
+grid = (
+    pst.Grid.from_project(project)
+    .geometry(cell=(50.0, 50.0), orient=0.0, outline="ModelEdge")
+    .horizons(["TopReservoir", "BaseReservoir"], tie_to_tops=True)
+    .zones({"Reservoir": ("TopReservoir", "BaseReservoir")})
+    .layers({"Reservoir": pst.Layering(n=8)})
+)
+vgm = pst.Var("spherical", major=800, minor=800, vertical=20, azimuth=0)
+grid.properties.por = pst.upscale(logs.PHIE(logs.NetSand > 0.50)).sgs(variogram=vgm, seed=1)
 ```
 
 Every spec ships value semantics (`to_dict`/`from_dict`, `==`/`hash`, `.replace`,
 table `repr`); a scenario round-trips through `ps.spec_from_dict(spec.to_dict())`,
-and `ps.AssetSpec` bundles a whole scenario (load + structure + props + mc) into one
-durable value.
+and `ps.AssetSpec` bundles simulation/scenario settings into one durable value.
 
 ### Multi-zone stacks
 
@@ -183,14 +162,11 @@ return the JSON dicts directly. Full guide: **`VIEWER.md`**.
 
 ## Migrating from v1
 
-Earlier versions used an eight-call staged chain (`proj.framework(...)` →
-`set_zones` → `build_grid` → per-property `upscale`/`propagate` → `grid.model` →
-`uncertainty` → `tornado`). It is **deprecated** (window: two minors) in favour of
-the declarative API above — it keeps working and emits a `DeprecationWarning`.
-Replace `proj.framework(horizons=[...])` with
-`proj.grid_geometry(...).build(ps.Horizons(ps.hz(...), zones=[...]))`, and the
-per-property `upscale`/`propagate` calls with a `ps.Props(ps.Prop(...))` spec passed
-to `grid.model(props=...)`. The runnable staged example is `examples/staged_build.py`.
+Earlier versions used an eight-call staged chain (`ps.Project.load(...)` →
+`proj.framework(...)` → `set_zones` → `build_grid` → per-property
+`upscale`/`propagate` → `grid.model` → `uncertainty` → `tornado`). That public
+project facade has been retired; load projects with `petekio` and build static
+models with `petekstatic`.
 
 ## Licensing
 

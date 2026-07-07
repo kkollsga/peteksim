@@ -62,7 +62,6 @@ def _canonicals():
         "Gridding": ps.Gridding(fidelity_m=0.5, extrapolation=ps.flat(), min_cell=0.5),
         "TieSettings": ps.TieSettings(method="radius", radius_m=1500.0),
         "Run": ps.Run(memory_budget=1 << 20, workers=4),
-        "LoadSettings": ps.LoadSettings(crs="ED50 / UTM 31N", aliases={"PHIE": "PORO"}),
         "ViewSettings": ps.ViewSettings(property="PORO", open_browser=False),
         "CollocatedTrend": ps.collocated("depo_trend", 0.6, as_depth=False),
         "Variogram": ps.variogram("exponential", 1200.0, sill=1.0, nugget=0.1),
@@ -72,10 +71,9 @@ def _canonicals():
         "Uncertain": ps.shift(0.02),
         "McSettings": ps.McSettings(lo_pct=10.0, hi_pct=90.0, workers=2),
         "Mc": mc,
-        "AssetSpec": ps.AssetSpec(name="acceptance", load=ps.LoadSettings(crs="x"),
+        "AssetSpec": ps.AssetSpec(name="acceptance",
                                   horizons=hz, subzones=sz, layering=lay, contacts=con,
                                   props=props, mc=mc, run=ps.Run(workers=1)),
-        "Crossplot": ps.Crossplot("PHIE", "PERM", y_log=True, regression=True),
         "Tornado": ps.Tornado(units="MSm³", fold_count=8),
         "Distribution": ps.Distribution(gas=False, zone="Z4"),
     }
@@ -174,12 +172,13 @@ def test_settings_precedence_layering_override_beats_default():
     assert lay2.for_zone("Z2") == (3, None)
 
 
-def test_load_settings_spec_xor_kwargs_is_loud(tmp_path):
-    (tmp_path / "empty").mkdir()
-    with pytest.raises(Exception) as e:
-        ps.Project.load(str(tmp_path / "empty"),
-                        crs="x", settings=ps.LoadSettings(crs="y"))
-    assert "not both" in str(e.value)
+def test_petekio_owns_project_loading_surface():
+    assert not hasattr(ps, "Project")
+    assert not hasattr(ps, "LoadSettings")
+    assert "Project" not in ps.__all__
+    assert "LoadSettings" not in ps.__all__
+    assert not hasattr(ps, "Crossplot")
+    assert "Crossplot" not in ps.__all__
 
 
 if __name__ == "__main__":

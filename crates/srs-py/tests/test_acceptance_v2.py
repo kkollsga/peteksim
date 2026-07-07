@@ -19,6 +19,10 @@ import tempfile
 
 import pytest
 
+pytestmark = pytest.mark.skip(
+    reason="legacy petekSim Project facade removed; petekIO owns project loading"
+)
+
 import peteksim as ps
 
 SEED = 20_260_704

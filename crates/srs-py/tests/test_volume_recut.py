@@ -22,6 +22,10 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.skip(
+    reason="legacy petekSim Project facade removed; petekIO owns project loading"
+)
+
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "examples"))
 

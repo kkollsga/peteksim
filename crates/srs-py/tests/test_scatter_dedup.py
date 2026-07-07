@@ -32,6 +32,10 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.skip(
+    reason="legacy petekSim Project facade removed; petekIO owns project loading"
+)
+
 # The dedup COUNT (one pass) is size-independent. The chain runs in the default
 # gate (~2 s): pinning the scatter lattice to the asset's own spacing
 # (`cell_size_m=100`, a 21x21 frame) keeps the cap-bound conditioning solve cheap.

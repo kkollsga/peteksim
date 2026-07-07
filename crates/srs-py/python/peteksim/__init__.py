@@ -27,16 +27,6 @@ from ._core import (
     Refined,
     run_box_model,
     version,
-    # --- staged model-build facade (Project.load -> ... -> model.uncertainty) ---
-    Project as _CoreProject,
-    Inventory,
-    Wells,
-    Surface,
-    Tops,
-    TopsPick,
-    Framework,
-    Grid as _CoreGrid,
-    Property,
     StaticModel,
     Uncertainty,
     ZonedUncertainty,
@@ -67,10 +57,8 @@ from ._core import (
 # --- modelling API v2 — the declarative spec surface + application driver -----
 # The v2 layer is a thin Python facade over the Rust `_core` engine: specs are
 # immutable values (to_dict/from_dict/replace/eq/table-repr, conformance battery
-# R7); applications are explicit moments. `Project`/`collocated` below OVERRIDE
-# the `_core` bindings with the v2 wrappers (the v1 chain keeps working, with a
-# DeprecationWarning, through the wrapped Project).
-from .apply import Project, collocated  # noqa: E402
+# R7); applications are explicit moments. Project loading is owned by petekIO.
+from .apply import collocated  # noqa: E402
 from .specs import (  # noqa: E402
     Spec, spec_from_dict, registered_specs, NotYetSupported, ApplyError,
     hz, splits, zone, Extrapolation, decay_to_flat, flat, nearest,
@@ -78,10 +66,9 @@ from .specs import (  # noqa: E402
     Horizons_factory as Horizons, Subzones_factory as Subzones,
     Layering_factory as Layering, Contacts_factory as Contacts,
     TieSettings_factory as TieSettings, Gridding_factory as Gridding,
-    Run_factory as Run, LoadSettings_factory as LoadSettings,
-    ViewSettings_factory as ViewSettings, Prop_factory as Prop,
+    Run_factory as Run, ViewSettings_factory as ViewSettings, Prop_factory as Prop,
     Props_factory as Props, Mc_factory as Mc, McSettings,
-    crossplot as Crossplot, tornado as Tornado, distribution as Distribution,
+    tornado as Tornado, distribution as Distribution,
     AssetSpec,
 )
 
@@ -136,9 +123,7 @@ def __dir__():
 __all__ = [
     "synth_asset",
     "Model", "ModelResult", "Refined", "run_box_model", "version", "view",
-    # facade (v1 + v2-wrapped Project)
-    "Project", "Inventory", "Wells", "Surface", "Tops", "TopsPick",
-    "Framework", "Property", "StaticModel", "Uncertainty", "ZonedUncertainty",
+    "StaticModel", "Uncertainty", "ZonedUncertainty",
     "Dist", "PickSpread", "Vgm", "GaussianSpec", "Trend", "Layers",
     "normal", "lognormal", "uniform", "triangular", "truncated_normal",
     "level_shift", "pick_spread", "spherical", "exponential", "gaussian_vgm",
@@ -150,8 +135,8 @@ __all__ = [
     "TieSettings", "Gridding", "Extrapolation", "decay_to_flat", "flat", "nearest",
     "Prop", "Props", "Propagate", "Variogram", "CollocatedTrend",
     "variogram", "Mc", "McSettings", "shift", "dist",
-    "Run", "LoadSettings", "ViewSettings", "AssetSpec",
-    "Crossplot", "Tornado", "Distribution",
+    "Run", "ViewSettings", "AssetSpec",
+    "Tornado", "Distribution",
     # canonical petekStatic property workflow, reached through petekSim as a shim
     "CoKriging", "DistributionSpec", "Grid", "PropertyHandle",
     "PropertyPipeline", "PropertyPipelineSpec", "PropertyStore", "SgsRecipe",

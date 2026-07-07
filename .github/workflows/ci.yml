@@ -13,11 +13,11 @@ jobs:
     name: cargo build / clippy / test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.9.1
       - name: fmt
         run: cargo fmt --all --check
       - name: clippy (warnings = errors)
@@ -31,9 +31,9 @@ jobs:
     name: maturin develop + import
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       # maturin develop requires an activated virtualenv on the runner.
@@ -60,10 +60,10 @@ jobs:
         # the latest stable CPython.
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-python@v5
+      - uses: Swatinem/rust-cache@v2.9.1
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true

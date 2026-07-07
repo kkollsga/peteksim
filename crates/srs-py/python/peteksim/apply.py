@@ -3,7 +3,7 @@
 Specs are declarative values; THIS module is where they get resolved against a
 loaded project and applied to the Rust ``peteksim._core`` engine. The moments:
 
-    geom  = proj.grid_geometry(extent=, cell=(dx, dy), orient=0)
+    geom  = GridGeometry(project, extent=, cell=(dx, dy), orient=0)
     grid  = geom.build(hz, sz, lay, collapse_negative=True)
     model = grid.model(props, con, fluid=, fvf=, wells=)
     mc    = model.zoned_uncertainty(mc)   # auto-routes on is_zoned
@@ -25,7 +25,6 @@ from .specs import (
     Gridding,
     Horizons,
     Layering,
-    LoadSettings,
     Mc,
     NotYetSupported,
     Props,
@@ -66,50 +65,6 @@ def collocated(surface, corr: float, as_depth: bool = False):
     return _core.collocated(surface, corr, as_depth)
 
 
-# --- Project (wraps _core.Project) ------------------------------------------
-
-class Project:
-    """A loaded project — the v2 entry point. Wraps ``_core.Project``; the v1
-    accessors (``inventory``/``wells``/``surface``/``tops``/``crossplot_bundle``)
-    are forwarded unchanged; ``framework`` stays (deprecated); ``grid_geometry``
-    opens the v2 build."""
-
-    def __init__(self, inner):
-        self._inner = inner
-
-    @classmethod
-    def load(cls, path: str, crs: Optional[str] = None,
-             aliases: Optional[Dict[str, str]] = None,
-             settings: Optional[LoadSettings] = None) -> "Project":
-        """Load a project tree. Pass ``settings=ps.LoadSettings(...)`` (v2) OR the
-        legacy ``crs=``/``aliases=`` kwargs — not both."""
-        _both(settings, {"crs": crs, "aliases": aliases}, "Project.load")
-        if settings is not None:
-            crs = settings.crs
-            aliases = settings.alias_dict()
-        return cls(_core.Project.load(path, crs=crs, aliases=aliases))
-
-    def __getattr__(self, name):  # forward v1 accessors to the inner project
-        return getattr(self._inner, name)
-
-    def framework(self, *args, **kwargs):
-        """(Deprecated) the v1 framework declaration — use
-        ``proj.grid_geometry(...).build(ps.Horizons(...))`` instead."""
-        warnings.warn(_DEPR + "Use proj.grid_geometry(...).build(ps.Horizons(...)).",
-                      DeprecationWarning, stacklevel=2)
-        return self._inner.framework(*args, **kwargs)
-
-    def grid_geometry(self, cell, extent=None, orient: float = 0.0) -> "GridGeometry":
-        """Open the v2 build with the areal geometry. ``cell`` is the output cell
-        size (a scalar or ``(dx, dy)``). ``orient`` (rotation, deg) must be 0 until
-        task_suite_grid_rotation lands. ``extent`` is advisory (the framework
-        derives its extent from the outline today)."""
-        return GridGeometry(self, cell=cell, extent=extent, orient=orient)
-
-    def __repr__(self) -> str:
-        return f"Project({self._inner.inventory()!r})"
-
-
 def _cell_size(cell) -> float:
     if isinstance(cell, (tuple, list)):
         if len(cell) != 2:
@@ -126,7 +81,7 @@ def _cell_size(cell) -> float:
 class GridGeometry:
     """The areal geometry (cell size + extent + orientation), pre-``build``."""
 
-    def __init__(self, project: Project, cell, extent, orient: float):
+    def __init__(self, project: Any, cell, extent, orient: float):
         if orient not in (0, 0.0):
             raise NotYetSupported(
                 f"grid_geometry(orient={orient}) — rotation is not yet supported "
@@ -381,7 +336,7 @@ class Model:
     ``zoned_uncertainty`` accept a ``ps.Mc`` spec (auto-routed) or the legacy
     kwargs (deprecated)."""
 
-    def __init__(self, inner, project: Project, structural=None):
+    def __init__(self, inner, project: Any, structural=None):
         self._inner = inner
         self._project = project
         # The Horizons structural-uncertainty descriptor (per-row sd/vgm), carried

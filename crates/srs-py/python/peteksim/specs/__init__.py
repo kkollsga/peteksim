@@ -33,8 +33,6 @@ from .settings import (
     Extrapolation,
     Gridding,
     Gridding_factory,
-    LoadSettings,
-    LoadSettings_factory,
     Run,
     Run_factory,
     TieSettings,
@@ -59,10 +57,8 @@ from .props import (
 from .mc import Mc, McSettings, Mc_factory, Uncertain, dist, shift
 from .asset import (
     AssetSpec,
-    Crossplot,
     Distribution,
     Tornado,
-    crossplot,
     distribution,
     tornado,
 )
@@ -74,9 +70,9 @@ __all__ = [
     "Layering", "Contacts", "ZoneColor", "zone",
     "Horizons_factory", "Subzones_factory", "Layering_factory", "Contacts_factory",
     # settings
-    "TieSettings", "Gridding", "Extrapolation", "Run", "LoadSettings", "ViewSettings",
+    "TieSettings", "Gridding", "Extrapolation", "Run", "ViewSettings",
     "decay_to_flat", "flat", "nearest",
-    "TieSettings_factory", "Gridding_factory", "Run_factory", "LoadSettings_factory",
+    "TieSettings_factory", "Gridding_factory", "Run_factory",
     "ViewSettings_factory",
     # props
     "Prop", "Props", "Propagate", "Variogram", "CollocatedTrend",
@@ -84,6 +80,6 @@ __all__ = [
     # mc
     "Mc", "McSettings", "Uncertain", "shift", "dist", "Mc_factory",
     # asset / charts
-    "AssetSpec", "Crossplot", "Tornado", "Distribution",
-    "crossplot", "tornado", "distribution",
+    "AssetSpec", "Tornado", "Distribution",
+    "tornado", "distribution",
 ]

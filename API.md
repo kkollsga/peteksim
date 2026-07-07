@@ -9,9 +9,8 @@
 
 **Rust is canonical; the Python surface mirrors it.** The compute lives in the Rust
 core (`peteksim._core`, over the petekStatic/petekIO/petekTools crates); this
-document specifies the **Python facade** — the product surface. The v2 spec layer is
-a thin Python facade over `_core`; a handful of names (`Project`, `collocated`)
-override the raw `_core` binding with a v2 wrapper.
+document specifies the **Python facade** — the product surface. Project loading is
+owned by `petekio`, and static model construction is owned by `petekstatic`.
 
 **Conventions:**
 - **SI / metric everywhere** (`decision_si_units_standard`): areas km², lengths /
@@ -46,52 +45,12 @@ ps.ApplyError(ValueError)                 # a spec could not resolve against the
                                           # the message names object AND spec entry
 ```
 
-## Project & geometry
+## Project Ownership
 
-```python
-ps.Project.load(path: str, crs: str | None = None,
-                aliases: dict[str, str] | None = None,
-                settings: ps.LoadSettings | None = None) -> Project
-    # Load a project tree. Pass settings=ps.LoadSettings(...) (v2) OR the legacy
-    # crs=/aliases= kwargs — not both (ApplyError on both).
-
-proj.grid_geometry(cell, extent=None, orient: float = 0.0) -> GridGeometry
-    # Open the v2 build. `cell` is the output cell size (scalar or (dx, dy);
-    # anisotropic dx != dy -> NotYetSupported). `orient` must be 0 (rotation is
-    # NotYetSupported). `extent` is advisory.
-
-# v1 / shared project accessors (forwarded unchanged):
-proj.inventory() -> Inventory           # what loaded + what was skipped-with-reason
-proj.wells() -> Wells                    # .ids(), .heads() -> [(id, x, y)]
-proj.surface(name: str) -> Surface       # .value_at(x, y), .values_at(points)
-proj.tops -> Tops                        # .pick(name, wells=None) -> TopsPick
-proj.crossplot_bundle(x, y, wells=None, color_by="well",
-                      x_log=False, y_log=False, regression=False)
-proj.framework(...) -> Framework         # DEPRECATED (v1 chain); see "v1" below
-
-geom.build(horizons: Horizons, subzones: Subzones | None = None,
-           layering: Layering | None = None, collapse_negative: bool = True,
-           outline: str = "ModelEdge", min_thickness_m: float = 0.0,
-           ties: TieSettings | None = None,
-           gridding: Gridding | None = None) -> Grid
-    # Freeze geometry + structure specs. Resolves horizon names early (loud on a
-    # miss); the engine build is deferred to grid.model so contacts + props land
-    # in one construction. `ties`/`gridding` default to the ones on `horizons`.
-```
-
-Project ingest is content-detected through `petekio.detect()` for surfaces,
-points, polygons, Petrel tops, LAS, wellpaths, and CRS sidecars. Unknown files keep
-the legacy extension fallback and still appear in `Inventory.skipped` when they
-cannot be placed. Well files are grouped by detected well id anywhere under the
-project root, not only under a `Wells/` directory. Petrel `Type == "Other"` fluid
-contacts surface through petekIO bore contacts and remain pickable via
-`proj.tops.pick("GOC"|"FWL"|"OWC", ...)` when the contact's well can be matched
-to a loaded bore.
-
-An explicit `outline="Name"` must resolve to a loaded polygon or raises a loud
-error listing the loaded polygon names. When `outline` is omitted, petekSim tries
-the conventional `ModelEdge`; if it is absent, it falls back to the framework
-bbox with a visible warning.
+petekSim does not expose `Project` or `LoadSettings`. Load project trees with
+`petekio.Project.load(..., settings=petekio.LoadSettings(...))`, then build
+static grids/properties/volumes through `petekstatic`. petekSim consumes completed
+static/dynamic products and provides simulation/appraisal workflows.
 
 ## Structure specs
 
@@ -139,8 +98,6 @@ ps.Run(memory_budget: int | None = None, workers: int = 0) -> Run
     # Run resources. memory_budget (BYTES) forwards to the engine out-of-core
     # switch (loud spill, never an OOM kill); workers shards the MC realize loop.
 
-ps.LoadSettings(crs: str | None = None,
-                aliases: dict[str, str] | None = None) -> LoadSettings
 ps.ViewSettings(property=None, open_browser: bool = True,
                 port: int = 0, block: bool = False) -> ViewSettings
 ```
@@ -194,8 +151,6 @@ ps.level_shift(sd);  ps.pick_spread(sd_m)               # .clamped(lo, hi) on sa
 ## Chart specs + the asset bundle
 
 ```python
-ps.Crossplot(x, y, wells=(), color_by="well", x_log=False, y_log=False,
-             regression=False) -> Crossplot     # applied on proj.crossplot_bundle
 ps.Tornado(base=None, units: str = "MSm³", fold_count: int = 8) -> Tornado
 ps.Distribution(gas=False, zone=None, name=None) -> Distribution
 
@@ -207,7 +162,7 @@ from peteksim.synth_asset import spill_recipe
 spill_recipe(ncol=61, n_cubes=3, nk_per_zone=14) -> dict
     # petekSim-owned spill-forcing estimate; reads the petekStatic live-set seam.
 
-ps.AssetSpec(name="", load=None, horizons=None, subzones=None, layering=None,
+ps.AssetSpec(name="", horizons=None, subzones=None, layering=None,
              contacts=None, ties=None, gridding=None, props=None, mc=None,
              run=None, view=None) -> AssetSpec
     # A whole modelling scenario as one durable value; every field is a spec, so
