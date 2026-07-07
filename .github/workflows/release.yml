@@ -7,10 +7,9 @@ name: Release
 # Configure a pending publisher on PyPI: project `peteksim`, owner kkollsga, repo
 # peteksim, workflow release.yml, environment pypi.
 #
-# NOTE: before pushing a v* tag, the sibling path dep on `petekstatic`
-# (`../petekStatic` in the root Cargo.toml [workspace.dependencies]) must resolve
-# from crates.io — its version pin (0.1.2) does; by release time the upstream
-# family crates are all published so the registry pins resolve on the CI runner.
+# NOTE: before pushing a v* tag, the workspace family deps in Cargo.toml must
+# resolve from crates.io. Release-train floors are updated after upstream family
+# crates publish, so the CI runner uses registry crates rather than sibling paths.
 on:
   push:
     tags: ["v*"]

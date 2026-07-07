@@ -4,7 +4,20 @@ All notable changes to petekSim are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.3] - 2026-07-07
+
+### Changed
+
+- **Static property workflow compatibility now delegates to petekStatic.**
+  `peteksim.upscale`, `peteksim.distributions`, `peteksim.Var`,
+  `peteksim.Grid`, `peteksim.PropertyPipelineSpec`, `peteksim.WellLogSpec`,
+  `peteksim.PropertyPipeline`, and `peteksim.WellLog` are a narrow shim to the
+  canonical petekStatic workflow API. Legacy `ps.Prop(...)` / `ps.Props(...)`
+  constructors still work for existing petekSim specs, but emit deprecation
+  guidance toward petekStatic.
+- **Release-train dependency floors are current.** The Rust crate resolves
+  against `petekio 0.3.2`, `petektools 0.2.3`, and `petekstatic 0.1.5`; the
+  Python wheel requires `petektools>=0.2.3` and `petekstatic>=0.1.5`.
 
 ## [0.1.2] - 2026-07-06
 

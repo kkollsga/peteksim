@@ -31,7 +31,7 @@ The canonical docs for the whole petek family live on the **petekSuite site**
 pip install peteksim        # the whole stack behind one facade (Python 3.10+)
 ```
 
-The wheel pulls its family dependencies (petektools) automatically. Rust
+The wheel pulls its family dependencies (petektools and petekstatic) automatically. Rust
 consumers: `cargo add peteksim`.
 
 ### Building from source (contributors)
@@ -41,6 +41,19 @@ python3 -m venv .venv-srs
 .venv-srs/bin/pip install petektools    # the horizontal viewer/toolkit wheel
 VIRTUAL_ENV="$PWD/.venv-srs" .venv-srs/bin/maturin develop -m crates/srs-py/Cargo.toml
 ```
+
+## Static Property Workflow
+
+The canonical static property workflow is owned by **petekStatic**. petekSim keeps
+a narrow compatibility shim so facade users can reach the same API as
+`peteksim.upscale(...).sgs(...)`, `peteksim.distributions.from_logs()`,
+`peteksim.Var`, `peteksim.Grid`, `peteksim.PropertyPipelineSpec`,
+`peteksim.WellLogSpec`, `peteksim.PropertyPipeline`, and `peteksim.WellLog`.
+
+Legacy petekSim property specs such as `ps.Prop(...)` / `ps.Props(...)` still work
+for existing declarative-model scenarios, but now emit deprecation guidance. New
+property-workflow code should use the petekStatic API directly, either through
+`petekstatic` or the petekSim shim.
 
 ## First volumes — a STOIIP P-curve in a handful of calls
 

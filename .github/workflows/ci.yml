@@ -73,7 +73,7 @@ jobs:
         run: maturin build --release -m crates/srs-py/Cargo.toml --out dist
       - name: install wheel + run run_box_model
         # Install the freshly built local wheel by path (never PyPI's peteksim);
-        # runtime deps (petektools) resolve from PyPI.
+        # runtime deps (petektools + petekstatic) resolve from PyPI.
         run: |
           pip install dist/peteksim-*.whl
           python - <<'PY'

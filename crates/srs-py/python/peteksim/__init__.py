@@ -87,6 +87,52 @@ from .specs import (  # noqa: E402
 
 from .synth_asset import synth_asset  # noqa: E402  (the complete synthetic-asset composer)
 
+_PETEKSTATIC_EXPORTS = (
+    "CoKriging",
+    "DistributionSpec",
+    "Grid",
+    "PropertyHandle",
+    "PropertyPipeline",
+    "PropertyPipelineSpec",
+    "PropertyStore",
+    "SgsRecipe",
+    "Spherical",
+    "UpscaleRecipeBuilder",
+    "Var",
+    "VolumeCase",
+    "VolumeResult",
+    "WellLog",
+    "WellLogSpec",
+    "distributions",
+    "upscale",
+)
+
+
+def _petekstatic():
+    try:
+        import petekstatic
+    except ModuleNotFoundError as exc:
+        if exc.name != "petekstatic":
+            raise
+        raise ImportError(
+            "peteksim's static property-workflow compatibility shim delegates to "
+            "petekstatic. Install petekstatic, or import petekstatic directly, to "
+            "use ps.Grid/ps.upscale/ps.distributions/ps.Var and related canonical "
+            "property workflow APIs."
+        ) from exc
+    return petekstatic
+
+
+def __getattr__(name):
+    if name in _PETEKSTATIC_EXPORTS:
+        return getattr(_petekstatic(), name)
+    raise AttributeError(f"module 'peteksim' has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_PETEKSTATIC_EXPORTS))
+
+
 __all__ = [
     "synth_asset",
     "Model", "ModelResult", "Refined", "run_box_model", "version", "view",
@@ -106,6 +152,11 @@ __all__ = [
     "variogram", "Mc", "McSettings", "shift", "dist",
     "Run", "LoadSettings", "ViewSettings", "AssetSpec",
     "Crossplot", "Tornado", "Distribution",
+    # canonical petekStatic property workflow, reached through petekSim as a shim
+    "CoKriging", "DistributionSpec", "Grid", "PropertyHandle",
+    "PropertyPipeline", "PropertyPipelineSpec", "PropertyStore", "SgsRecipe",
+    "Spherical", "UpscaleRecipeBuilder", "Var", "VolumeCase", "VolumeResult",
+    "WellLog", "WellLogSpec", "distributions", "upscale",
 ]
 
 

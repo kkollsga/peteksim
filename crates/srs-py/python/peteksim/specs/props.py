@@ -9,9 +9,19 @@ the eager-binding defect the api-consistency contract calls out.
 from __future__ import annotations
 
 import dataclasses
+import warnings
 from typing import Any, Dict, Optional, Tuple
 
 from .base import ApplyError, Spec, render_table, spec
+
+
+_PROPERTY_WORKFLOW_DEPR = (
+    "peteksim.Prop/Props are a legacy petekSim property spec surface. The "
+    "canonical property workflow now lives in petekStatic; use "
+    "peteksim.upscale(...).sgs(...), peteksim.distributions.from_logs(), "
+    "peteksim.Var, peteksim.Grid, and peteksim.PropertyPipelineSpec (or import "
+    "the same names from petekstatic)."
+)
 
 
 # --- collocated trend (name-holding) ----------------------------------------
@@ -113,6 +123,7 @@ class Prop(Spec):
 def Prop_factory(name: str, zone: Optional[str] = None, upscale_method: str = "arithmetic",
                  net_only: bool = False, net_cutoff: float = 0.5,
                  propagate: Optional[Propagate] = None) -> Prop:
+    warnings.warn(_PROPERTY_WORKFLOW_DEPR, DeprecationWarning, stacklevel=2)
     return Prop(name=name, zone=zone, upscale_method=upscale_method,
                 net_only=net_only, net_cutoff=net_cutoff, propagate=propagate)
 
@@ -147,4 +158,5 @@ class Props(Spec):
 
 
 def Props_factory(*items: Prop) -> Props:
+    warnings.warn(_PROPERTY_WORKFLOW_DEPR, DeprecationWarning, stacklevel=2)
     return Props(items=tuple(items))
