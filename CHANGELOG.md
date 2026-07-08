@@ -4,6 +4,17 @@ All notable changes to petekSim are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-07-08
+
+### Changed
+
+- Updated release-train dependency floors to `petektools 0.2.6`,
+  `petekio 0.3.7`, and `petekstatic 0.1.10`; the Python wheel now requires
+  those published floors so petekSim consumes the current point-edge,
+  structured mesh surface, and viewer topology-grid QA releases.
+- Hardened CI/release wheel install checks with retrying binary-only installs
+  and added a PyPI visibility verification job before GitHub Release creation.
+
 ## [0.1.7] - 2026-07-08
 
 ### Changed

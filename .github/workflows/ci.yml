@@ -42,7 +42,13 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           pip install maturin
-          maturin develop -m crates/srs-py/Cargo.toml
+          for attempt in 1 2 3 4 5 6; do
+            maturin develop -m crates/srs-py/Cargo.toml && break
+            if [ "$attempt" = "6" ]; then
+              exit 1
+            fi
+            sleep $((attempt * 20))
+          done
           python -c "import peteksim; print(peteksim.version())"
 
   wheels:
@@ -75,7 +81,13 @@ jobs:
         # Install the freshly built local wheel by path (never PyPI's peteksim);
         # runtime deps (petektools + petekstatic) resolve from PyPI.
         run: |
-          pip install dist/peteksim-*.whl
+          for attempt in 1 2 3 4 5 6; do
+            pip install --no-cache-dir --only-binary=:all: dist/peteksim-*.whl && break
+            if [ "$attempt" = "6" ]; then
+              exit 1
+            fi
+            sleep $((attempt * 20))
+          done
           python - <<'PY'
           import peteksim
           r = peteksim.run_box_model(
