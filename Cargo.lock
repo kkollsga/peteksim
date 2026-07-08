@@ -711,9 +711,9 @@ checksum = "4ec91767ecc0a0bbe558ce8c9da33c068066c57ecc8bb8477ef8c1ad3ef77c27"
 
 [[package]]
 name = "petekio"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ac4e56caf51b6dbb02241c4d714bf500a6d21be7778e283a692bb1cc2dbb6c8"
+checksum = "6a70882067e6173ab28c010bd9adb2d03d2a03195f9afedd632a3dff7daa7c5e"
 dependencies = [
  "bincode",
  "csv",
@@ -731,7 +731,7 @@ dependencies = [
 
 [[package]]
 name = "peteksim"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "base64",
  "petekio",
@@ -746,9 +746,9 @@ dependencies = [
 
 [[package]]
 name = "petekstatic"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "239b4f43908bfd5d091de732ba13d529fd376a7778a420e8be604b7e2eb19c3d"
+checksum = "1779ce09e8d8001d75047371fb07a8676e7ff4f1d63ebd1d34d3e54a38cced63"
 dependencies = [
  "base64",
  "ndarray",
@@ -1240,7 +1240,7 @@ dependencies = [
 
 [[package]]
 name = "srs-py"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "peteksim",
  "pyo3",

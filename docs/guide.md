@@ -41,16 +41,16 @@ import petekio as pio
 import peteksim as ps
 
 man  = ps.synth_asset(tempfile.mkdtemp(), seed=20260704, n_wells=8)
-project = pio.Project.load(
+project = pio.Project.import_data(
     man["root"],
-    settings=pio.LoadSettings(crs=man["crs"], aliases=man["aliases"]),
+    settings=pio.ImportSettings(crs=man["crs"], aliases=man["aliases"]),
 )
 project.inventory()   # what loaded + what was skipped-with-reason
 ```
 
 The manifest carries the names you feed the specs (`horizons`, `zones`,
 `zonation`, `contacts`, `well_ids`, `net_cutoff`, `crs`, `aliases`, …). On real
-data you would point `petekio.Project.load` at your own export folder.
+data you would point `petekio.Project.import_data` at your own export folder.
 
 ## The declarative model build (API v2)
 

@@ -48,7 +48,7 @@ ps.ApplyError(ValueError)                 # a spec could not resolve against the
 ## Project Ownership
 
 petekSim does not expose `Project` or `LoadSettings`. Load project trees with
-`petekio.Project.load(..., settings=petekio.LoadSettings(...))`, then build
+`petekio.Project.import_data(..., settings=petekio.ImportSettings(...))`, then build
 static grids/properties/volumes through `petekstatic`. petekSim consumes completed
 static/dynamic products and provides simulation/appraisal workflows.
 

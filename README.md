@@ -67,9 +67,9 @@ import petekio as pio
 import petekstatic as pst
 import peteksim as ps
 
-project = pio.Project.load(
+project = pio.Project.import_data(
     "Data/",
-    settings=pio.LoadSettings(
+    settings=pio.ImportSettings(
         crs="EPSG:32631",
         aliases={"PHIE": ["PHI", "PHIE"], "NetSand": ["NTG", "NETSAND"]},
     ),
