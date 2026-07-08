@@ -44,7 +44,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 # BSL-1.1 via its SPDX identifier (BUSL-1.1). The full text ships as the repo-root
 # LICENSE; the SPDX id is what crates.io / PyPI surface. (A workspace-root
@@ -55,7 +55,7 @@ rust-version = "1.80"
 
 [workspace.dependencies]
 # The consolidated library crate (the py binding crate depends on it).
-peteksim = { path = ".", version = "0.1.8" }
+peteksim = { path = ".", version = "0.1.9" }
 # CROSS-REPO family deps.
 # petekStatic (GEOMODEL layer, downstream DAG edge): the consolidated geomodel +
 # static-uncertainty crate. Resolved from crates.io; to develop against the
@@ -63,13 +63,13 @@ peteksim = { path = ".", version = "0.1.8" }
 #   [patch.crates-io]
 #   petekstatic = { path = "../petekStatic" }
 # petekstatic::error::StaticError composes into SrsError via #[from].
-petekstatic = "0.1.10"
+petekstatic = "0.1.11"
 # petekTools (pure-leaf toolkit, downstream DAG edge): numeric kernels + units +
 # the viewer unit. Resolved from crates.io.
-petektools = "0.2.6"
+petektools = "0.2.7"
 # petekio (DATA layer): its neutral Distribution DTO is the input of the lifted
 # `distribution_of` (DTO→sampler) mapping. Resolved from crates.io.
-petekio = "0.3.7"
+petekio = "0.3.8"
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 
