@@ -1,84 +1,89 @@
 #!/usr/bin/env python3
-"""The modelling API v2 headline: declarative specs applied at explicit moments,
-from a (synthetic) Petrel export to a per-zone STOIIP P-curve — on the canonical
-synthetic asset.
+"""Current suite modelling shape on the canonical synthetic asset.
 
-    VIRTUAL_ENV="$PWD/.venv-srs" .venv-srs/bin/maturin develop -m crates/srs-py/Cargo.toml
-    .venv-srs/bin/python examples/model_build_v2.py
+petekSim creates the synthetic export and remains the appraisal/product layer.
+petekIO imports the raw project tree. petekStatic owns static grid declaration,
+property setup, log-upscale recipes, and volumetrics.
 
-A spec says WHAT/HOW and holds NAMES (resolved at apply); applications are the
-explicit moments geom.build / grid.model / model.zoned_uncertainty. No
-confidential data is used or produced.
+No confidential data is used or produced.
 """
 
 from __future__ import annotations
 
 import sys
 import tempfile
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import peteksim as ps  # noqa: E402
+import petekio as pio
+import peteksim as ps
+import petekstatic as pst
 
 
 def main(root: str | None = None) -> int:
     root = root or tempfile.mkdtemp(prefix="model-v2-")
-    man = ps.synth_asset(root)
-    print(f"peteksim {ps.version()} — modelling API v2 over {man['root']}\n")
+    manifest = ps.synth_asset(root, seed=20260704, n_wells=4)
+    print(f"peteksim {ps.version()} synthetic export: {manifest['root']}\n")
 
-    # INGEST — a LoadSettings spec is a value (crs + alias canonicalisation).
-    proj = ps.Project.load(
-        man["root"], settings=ps.LoadSettings(crs=man["crs"], aliases=man["aliases"]))
-    print("Project.load  ", proj.inventory())
-
-    # DECLARE — structure + settings as names, resolved at apply.
-    hz = ps.Horizons(
-        *[ps.hz(h) for h in man["horizons"]],
-        zones=man["zones"],
-        ties=ps.TieSettings(method="convergent"),
-        gridding=ps.Gridding(collapse=True),
+    project = pio.Project.import_data(
+        manifest["root"],
+        settings=pio.ImportSettings(
+            crs=manifest["crs"],
+            aliases=manifest["aliases"],
+        ),
     )
-    lay = ps.Layering(nk=2)
-    con = ps.Contacts({z["zone"]: dict(z["contacts"])
-                       for z in man["zonation"] if z["contacts"]})
-    props = ps.Props(
-        ps.Prop("PORO", net_only=True,
-                propagate=ps.Propagate(variogram=ps.variogram("spherical", 1500.0), seed=11)),
-        ps.Prop("NTG",
-                propagate=ps.Propagate(variogram=ps.variogram("spherical", 1500.0), seed=12)),
+    print("Project.import_data:", project.inventory()["counts"])
+    print("project.surfaces:", project.surfaces)
+    print("project.wells.logs:", project.wells.logs)
+
+    grid = (
+        pst.Grid.from_project(project)
+        .geometry(cell=(50.0, 50.0), orient=0.0, outline="ModelEdge")
+        .horizons(
+            [
+                {
+                    "name": "Top reservoir",
+                    "surface": manifest["horizons"][0],
+                    "well top": "FieldWellTops/H0",
+                    "zone": "Reservoir",
+                },
+                {
+                    "name": "Base reservoir",
+                    "surface": manifest["horizons"][-1],
+                    "well top": "FieldWellTops/H6",
+                },
+            ],
+            well_tie={"influence_radius": 800},
+        )
+        .layers({"Reservoir": pst.Layering(n=2)})
     )
-    print("\nHorizons spec (a value — prints as its stratigraphic column):")
-    print(hz)
 
-    # APPLY — the explicit moments.
-    geom = proj.grid_geometry(cell=(50.0, 50.0), orient=0)
-    grid = geom.build(hz, layering=lay, collapse_negative=True, min_thickness_m=0.0)
-    model = grid.model(props, con, fluid="oil", fvf=1.30, gas_fvf=0.005, wells=proj.wells())
-    print("\nmodel:", model, " is_zoned:", model.is_zoned())
+    p = grid.properties
+    p.ntg = 0.80
+    p.por = p.ntg * 0.85
+    p.sw = 0.20
 
-    for r in model.in_place_by_zone()["zones"]:
-        print(f"  {r['zone']:5s}  STOIIP={r['stoiip_sm3']/1e6:8.3f} MSm³  "
-              f"two_contact={r['two_contact']}")
+    result = grid.volumes(ntg="ntg", por="por", sw="sw", fluid="oil", fvf=1.30).run()
+    summary = result.summary()
+    print(
+        "\nstatic volumes:",
+        f"GRV={summary['grv_m3']:.0f} m3",
+        f"HCPV={summary['hcpv_m3']:.0f} m3",
+        f"OOIP={summary['ooip_sm3']:.0f} Sm3",
+    )
 
-    # MC — one Mc spec, auto-routed to the zoned run.
-    mc = model.zoned_uncertainty(ps.Mc(porosity=0.01, contacts=4.0, goc=3.0, n=2000, seed=42))
-    t = mc.total["stoiip"]
-    print(f"\nfield STOIIP P90/P50/P10 = "
-          f"{t['p90_msm3']:.3f} / {t['p50_msm3']:.3f} / {t['p10_msm3']:.3f} MSm³")
-
-    # SCENARIO — a derived spec (deeper Z4 FWL): same geometry, a new model.
-    deeper = con.replace("Z4", goc=man["contacts"]["goc_z4"],
-                         fwl=man["contacts"]["fwl_z4"] + 30.0)
-    model_b = grid.model(props, deeper, fluid="oil", fvf=1.30, gas_fvf=0.005)
-    a = model.in_place_by_zone()["total"]["stoiip_sm3"] / 1e6
-    b = model_b.in_place_by_zone()["total"]["stoiip_sm3"] / 1e6
-    print(f"\nscenario derivation: base total {a:.3f} MSm³ → deeper-FWL {b:.3f} MSm³")
-
-    # A scenario is a savable file: round-trip the whole asset spec through a dict.
-    asset = ps.AssetSpec(name="demo", load=ps.LoadSettings(crs=man["crs"]),
-                         horizons=hz, layering=lay, contacts=con, props=props)
-    assert ps.spec_from_dict(asset.to_dict()) == asset
-    print("\nAssetSpec round-trips through to_dict/from_dict (durable scenario).")
+    logs = project.wells.logs
+    vgm = pst.Var("spherical", major=1500, minor=700, vertical=20, azimuth=35)
+    recipe = pst.upscale(logs.PORO(logs.NTG > 0.50)).sgs(
+        distribution=pst.distributions.from_logs(),
+        variogram=vgm,
+        seed=12,
+    )
+    spec = recipe.lower("PORO_NET", project=project)
+    print(
+        "log-upscale recipe:",
+        spec.property,
+        f"{len(spec.well_logs or ())} wells",
+        spec.variogram,
+    )
     return 0
 
 
