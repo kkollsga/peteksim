@@ -4,6 +4,15 @@ All notable changes to petekSim are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-07-08
+
+### Changed
+
+- Updated release-train dependency floors to `petektools 0.2.5`,
+  `petekio 0.3.6`, and `petekstatic 0.1.9`; the Python wheel now requires
+  those published floors so petekSim consumes the current project/object,
+  interpolation, and static workflow releases.
+
 ## [0.1.6] - 2026-07-08
 
 ### Changed
