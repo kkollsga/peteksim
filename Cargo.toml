@@ -44,7 +44,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 # BSL-1.1 via its SPDX identifier (BUSL-1.1). The full text ships as the repo-root
 # LICENSE; the SPDX id is what crates.io / PyPI surface. (A workspace-root
@@ -69,7 +69,7 @@ petekstatic = "0.1.11"
 petektools = "0.2.7"
 # petekio (DATA layer): its neutral Distribution DTO is the input of the lifted
 # `distribution_of` (DTO→sampler) mapping. Resolved from crates.io.
-petekio = "0.3.8"
+petekio = "0.3.9"
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 
