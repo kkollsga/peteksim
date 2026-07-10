@@ -114,7 +114,7 @@ operations, and releases. A petekSim task is scoped and supervised through the
 central `run-library-task` skill; the spawned owning agent edits this repository,
 runs the gates above, and reports evidence for the coordinator to record.
 
-Technical designs, benchmark records, acceptance tooling, and clean-room study
+Technical designs, benchmark records, acceptance tooling, and internal study
 material remain local because they describe or validate this library. Actionable
 state lives under `petekSuite/dev-docs/libraries/petekSim/`. There is no local
 skill tree, inbox, todo index, MCP configuration, Actions authority, or release
