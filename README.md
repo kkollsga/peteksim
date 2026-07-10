@@ -179,7 +179,7 @@ publication. For alternative licensing, contact kkollsga@gmail.com.
 
 ## Contributing
 
-Building petekSim itself — the crate workspace, the build/test gates, the acceptance
-suite, and the planning-graph/inbox workflow — is documented in
+Building petekSim itself — the crate workspace, build/test gates, acceptance
+suite, and petekSuite-managed contribution workflow — is documented in
 [CONTRIBUTING.md](CONTRIBUTING.md). Design and architecture live in
 [SPEC.md](SPEC.md); the locked public API is [API.md](API.md).

@@ -1,11 +1,10 @@
-# Local working folders + internal tooling (not part of the published library)
+# Library-local technical study/design/benchmark material (not published).
+# Actionable state, skills, inbox routing, Actions, and releases are owned by
+# petekSuite's central control plane.
 /dev-docs/
-/inbox/
 /research/
 /tools/
 /notes/
-/.claude/
-/.mcp.json
 /CLAUDE.local.md
 /Makefile.local
 

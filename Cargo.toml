@@ -9,7 +9,7 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 # The published crate ships no test/example data (house rule).
-exclude = ["/tests", "/examples", "/dev-docs", "/inbox", "/docs", "/notes", "/research", "/tools", "/crates"]
+exclude = ["/tests", "/examples", "/dev-docs", "/docs", "/notes", "/research", "/tools", "/crates"]
 
 [lints]
 workspace = true

@@ -3,7 +3,7 @@
 > **This file is the contract.** The `peteksim` wheel must expose exactly these
 > names and signatures (arguments, defaults, return shapes). Bodies are the
 > implementer's; the *surface* is fixed. Changing a signature here requires
-> sign-off (coordinator + any downstream consumer for a cross-library seam) and an
+> sign-off (petekSuite coordinator + any downstream consumer for a cross-library seam) and an
 > edit to this file — the code must never silently drift from it. See
 > [SPEC.md](SPEC.md) for the design constitution.
 
