@@ -60,12 +60,15 @@ crates/srs-py     # PyO3/maturin bindings + the pure-Python `peteksim` package
 
 ```
 petekstatic       # GEOMODEL layer: structural framework + grid + property modelling +
-                  #   volumetrics/static uncertainty; its StaticError composes into
-                  #   SrsError via #[from] (reaches petekio::GeoError transitively)
+                  #   volumetrics/static uncertainty; its core is consumed without
+                  #   the optional petekIO compatibility adapter
 petektools        # horizontal TOOLKIT: numeric kernels + units + the viewer unit
                   #   (also a runtime dep of the wheel: petektools>=0.2.1 on PyPI)
 petekio           # DATA layer: names its neutral Distribution DTO in distribution_of
 ```
+
+petekStatic owns and tests its optional petekIO compatibility adapter. petekSim
+tests only its owned DATA→SIM mappings instead of repeating that upstream suite.
 
 Version pins live in the root `Cargo.toml` `[workspace.dependencies]`. To develop
 against a sibling checkout, patch locally in a gitignored `.cargo/config.toml`

@@ -4,6 +4,20 @@ All notable changes to petekSim are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- CI now builds the abi3 wheel once and validates that exact artifact on Python
+  3.10–3.14, with the installed-wheel Python suite retained on Python 3.12.
+- Release artifacts build in parallel with the Rust gates, while publication
+  remains blocked on both the gates and release tag.
+- The world-coordinate fallback regression keeps the same boundary conditions on
+  a compact grid, avoiding a production-sized interpolation solve in unit tests.
+- petekStatic's optional petekIO compatibility adapter is no longer compiled or
+  retested by petekSim; normal product builds consume petekStatic's independent
+  core, while each library retains tests for the seam it owns.
+
 ## [0.1.10] - 2026-07-09
 
 ### Fixed

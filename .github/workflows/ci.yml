@@ -8,6 +8,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   rust:
     name: cargo build / clippy / test
@@ -21,43 +25,35 @@ jobs:
       - name: fmt
         run: cargo fmt --all --check
       - name: clippy (warnings = errors)
-        run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: build
-        run: cargo build --workspace
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: test
-        run: cargo test --workspace
+        run: cargo test --workspace --all-features
 
-  python:
-    name: maturin develop + import
+  wheel-build:
+    name: build abi3 wheel once
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.1
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
-      # maturin develop requires an activated virtualenv on the runner.
-      - name: build + import smoke test
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install maturin
-          for attempt in 1 2 3 4 5 6; do
-            maturin develop -m crates/srs-py/Cargo.toml && break
-            if [ "$attempt" = "6" ]; then
-              exit 1
-            fi
-            sleep $((attempt * 20))
-          done
-          python -c "import peteksim; print(peteksim.version())"
+          python-version: "3.10"
+      - run: pip install maturin
+      - run: maturin build --release -m crates/srs-py/Cargo.toml --out dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: peteksim-abi3-wheel
+          path: dist/*.whl
 
-  wheels:
-    # Build the abi3 wheel and import + run it across a Python matrix so a
+  wheel-test:
+    # Import + run the same abi3 wheel across the Python matrix so a
     # toolchain regression (e.g. a pyo3 that can't link a new CPython — the
     # 0.24-vs-3.14 blocker) is caught here, not by users. abi3-py310 means one
     # wheel spans 3.10+, but we still build AND import on each interpreter so a
     # per-version link/ABI break surfaces.
-    name: wheel build + run (py ${{ matrix.python-version }})
+    name: wheel run (py ${{ matrix.python-version }})
+    needs: wheel-build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -67,16 +63,14 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2.9.1
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-      - name: install maturin
-        run: pip install maturin
-      - name: build release wheel
-        run: maturin build --release -m crates/srs-py/Cargo.toml --out dist
+      - uses: actions/download-artifact@v8
+        with:
+          name: peteksim-abi3-wheel
+          path: dist
       - name: install wheel + run run_box_model
         # Install the freshly built local wheel by path (never PyPI's peteksim);
         # runtime deps (petektools + petekstatic) resolve from PyPI.
@@ -99,3 +93,8 @@ jobs:
           assert len(r.samples) == r.realizations == 2000
           print("peteksim", peteksim.version(), "ok:", r)
           PY
+      - name: installed-wheel Python suite
+        if: matrix.python-version == '3.12'
+        run: |
+          pip install pytest
+          python -m pytest crates/srs-py/tests -q

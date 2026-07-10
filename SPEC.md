@@ -55,8 +55,8 @@ followed (2026-07-03), consumed here across the repo seam via path deps.
 
 ```
 srs-units    the workspace error type (SrsError). petekstatic::error::StaticError
-             composes in via #[from]; it reaches petekio::GeoError transitively,
-             so `?` chains DATA -> GEOMODEL -> SIM and source() reaches the origin.
+             and petekio::GeoError compose directly via #[from], so `?` chains
+             through the product facade and source() reaches the origin.
 srs-pvt      PVT correlations + FVF handling — the dynamic/engineering core.
 srs-core     the product facade: facade::{Project, Framework, StaticGrid, Model,
              uncertainty}; the analytic box path (run_box_model); the thin
@@ -71,6 +71,9 @@ layers `srs-grid` · `srs-gridder` · `srs-wireframe` · `srs-petro` · `srs-dat
 `srs-volumetrics` · `srs-uncertainty` · `srs-model` live there as modules),
 `petektools`, and the published `petekio` DATA crate. Local development can patch
 those crates to sibling checkouts.
+
+petekStatic owns and tests its optional `petekio-adapter`; petekSim consumes the
+independent core and tests only the DATA→SIM mappings it owns.
 
 ## 3. Split the elephant 🐘
 
