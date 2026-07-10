@@ -2,8 +2,10 @@
 
 petekSim follows the shared **petek house style** (canonical:
 `petekSuite/dev-docs/petek-house-style.md`) — the conventions below are this
-library's slice of it. petekSim is a peer library; the coordinator is petekSuite
-(see `CLAUDE.local.md`).
+library's slice of it. petekSim is a managed library; **petekSuite is the sole
+coordinator and control plane**. It owns agents, actionable todos, planning-graph
+writes, GitHub Actions operations, and releases. Work here is executed by a
+directly spawned petekSim agent through petekSuite's `run-library-task` skill.
 
 **Identity (graph `decision_layer_charters`, 2026-07-03): dynamic/engineering
 simulation + THE product.** The engineering core is recoverable/forecast work
@@ -60,12 +62,15 @@ crates/srs-py     # PyO3/maturin bindings + the pure-Python `peteksim` package
 
 ```
 petekstatic       # GEOMODEL layer: structural framework + grid + property modelling +
-                  #   volumetrics/static uncertainty; its StaticError composes into
-                  #   SrsError via #[from] (reaches petekio::GeoError transitively)
+                  #   volumetrics/static uncertainty; its core is consumed without
+                  #   the optional petekIO compatibility adapter
 petektools        # horizontal TOOLKIT: numeric kernels + units + the viewer unit
                   #   (also a runtime dep of the wheel: petektools>=0.2.1 on PyPI)
 petekio           # DATA layer: names its neutral Distribution DTO in distribution_of
 ```
+
+petekStatic owns and tests its optional petekIO compatibility adapter. petekSim
+tests only its owned DATA→SIM mappings instead of repeating that upstream suite.
 
 Version pins live in the root `Cargo.toml` `[workspace.dependencies]`. To develop
 against a sibling checkout, patch locally in a gitignored `.cargo/config.toml`
@@ -90,8 +95,22 @@ against a sibling checkout, patch locally in a gitignored `.cargo/config.toml`
 - **No bugs left behind.** A pre-existing bug you encounter gets fixed in the same
   change, or surfaced explicitly — never silently stepped over.
 
+## Central coordination
+
+- Technical work stays in this repository: code, tests, acceptance tooling,
+  architecture/API contracts, benchmark records, and domain designs.
+- Actionable state lives under
+  `petekSuite/dev-docs/libraries/petekSim/`; petekSim has no local todo index,
+  inbox, skill tree, or MCP configuration.
+- The suite coordinator claims and writes planning-graph state after supervising
+  the owning agent. Managed-library work is never routed through inbox files.
+- Repository-local CI and release workflows remain the GitHub/security boundary,
+  but petekSuite centrally manages, dispatches, monitors, and retries them.
+
 ## Commits & releases
 
 Commit format: `type: short description` (`feat`, `fix`, `docs`, `refactor`,
-`test`, `chore`). Update `CHANGELOG.md` `[Unreleased]` for user-visible changes
-(once we keep one). **Pushing requires explicit, in-the-moment approval.**
+`test`, `chore`). Update `CHANGELOG.md` `[Unreleased]` for user-visible changes.
+**petekSuite is the sole release authority.** Pushing requires explicit,
+in-the-moment approval unless the suite-level `release` skill was invoked for
+that release run.

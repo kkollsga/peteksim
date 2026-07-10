@@ -895,8 +895,10 @@ mod tests {
     const XORI: f64 = 431_000.0;
     const YORI: f64 = 6_521_000.0;
     const CELL: f64 = 100.0;
-    const NCOL: usize = 41; // 40 cells → 4 km span
-    const NROW: usize = 37;
+    // Keep the regression's world-coordinate/non-node shape while avoiding a
+    // production-sized minimum-curvature solve in every unit-test run.
+    const NCOL: usize = 13;
+    const NROW: usize = 11;
 
     fn world_geom() -> GridGeometry {
         GridGeometry {
@@ -927,7 +929,7 @@ mod tests {
                 .wrapping_add(1442695040888963407);
             ((s >> 33) as f64) / (u32::MAX as f64)
         };
-        for _ in 0..1500 {
+        for _ in 0..240 {
             let fx = next();
             let fy = next();
             // Guard the half-cell margin so a sample cannot round onto a node.
@@ -993,18 +995,18 @@ mod tests {
         // minimum, but enough for petekio's node-snap min-curvature to grid.
         vec![
             WorldPoint {
-                x: XORI + 5.37 * CELL,
-                y: YORI + 5.29 * CELL,
+                x: XORI + 2.37 * CELL,
+                y: YORI + 2.29 * CELL,
                 depth_m: depth0,
             },
             WorldPoint {
-                x: XORI + 20.37 * CELL,
-                y: YORI + 15.29 * CELL,
+                x: XORI + 6.37 * CELL,
+                y: YORI + 5.29 * CELL,
                 depth_m: depth0 + 10.0,
             },
             WorldPoint {
-                x: XORI + 30.37 * CELL,
-                y: YORI + 25.29 * CELL,
+                x: XORI + 10.37 * CELL,
+                y: YORI + 8.29 * CELL,
                 depth_m: depth0 + 20.0,
             },
         ]

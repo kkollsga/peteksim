@@ -6,7 +6,8 @@
 > contract is [API.md](API.md); the shared conventions are the petek family house
 > style (`petekSuite/dev-docs/petek-house-style.md`). Build conventions are in
 > `CLAUDE.md`; contributor workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
-> Cross-library seams + lifecycle live in the suite planning graph (`contract` MCP).
+> Cross-library seams + lifecycle live in the suite planning graph, owned and
+> written by the petekSuite coordinator.
 
 petekSim is two things at once (graph `decision_layer_charters`, 2026-07-03):
 
@@ -55,8 +56,8 @@ followed (2026-07-03), consumed here across the repo seam via path deps.
 
 ```
 srs-units    the workspace error type (SrsError). petekstatic::error::StaticError
-             composes in via #[from]; it reaches petekio::GeoError transitively,
-             so `?` chains DATA -> GEOMODEL -> SIM and source() reaches the origin.
+             and petekio::GeoError compose directly via #[from], so `?` chains
+             through the product facade and source() reaches the origin.
 srs-pvt      PVT correlations + FVF handling — the dynamic/engineering core.
 srs-core     the product facade: facade::{Project, Framework, StaticGrid, Model,
              uncertainty}; the analytic box path (run_box_model); the thin
@@ -71,6 +72,9 @@ layers `srs-grid` · `srs-gridder` · `srs-wireframe` · `srs-petro` · `srs-dat
 `srs-volumetrics` · `srs-uncertainty` · `srs-model` live there as modules),
 `petektools`, and the published `petekio` DATA crate. Local development can patch
 those crates to sibling checkouts.
+
+petekStatic owns and tests its optional `petekio-adapter`; petekSim consumes the
+independent core and tests only the DATA→SIM mappings it owns.
 
 ## 3. Split the elephant 🐘
 
@@ -148,12 +152,12 @@ schema**; the horizontal `petektools.viewer` unit renders it
 `model.view()`, and a browser view opens; `save_view` writes one self-contained,
 confidential-data-safe HTML file.
 
-## 8. The planning graph is the cross-library source of truth
+## 8. Central coordination and the planning graph
 
-The suite planning graph (`petekSuite/research/graph`, `contract` MCP) holds the
-inter-library contracts, decisions, and open questions. petekSim is a **participant,
-not the coordinator** (that role is petekSuite). Reach for the graph on anything
-cross-cutting; write results back with runtime types only (`Question` / `Decision` /
-`Artifact` / `Task`), MERGE on id, provenance `modified_by='peteksim'`. No direct
-graph access → route via the inbox to petekSuite. Full protocol: petek house style
-§8 + `CONTRIBUTING.md`.
+The suite planning graph (`petekSuite/research/graph`) holds inter-library
+contracts, decisions, lifecycle state, and open questions. **petekSuite is its
+sole operational owner:** it scopes work, directly spawns the owning petekSim
+agent, supervises local gates, and records graph/todo state centrally. petekSim
+retains the technical implementation and evidence; it has no local skill,
+inbox, todo, Actions-control, or release-authority surface. Full protocol: petek
+house style §8 + `CONTRIBUTING.md`.

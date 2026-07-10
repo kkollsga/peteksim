@@ -92,7 +92,8 @@ via `grid.model(..., run=ps.Run(memory_budget=<bytes>))`), and `acceptance_rende
 (opt-in — a headless-Chromium Playwright round-trip of the `save_view` export; skips
 cleanly when node/playwright/chromium are absent).
 
-This is the standing gate the coordinator runs before stamping a cross-repo task.
+This is the standing gate the petekSuite coordinator requires from the directly
+spawned petekSim agent before stamping a cross-repo task.
 
 ## Testing doctrine
 
@@ -105,24 +106,26 @@ planted-truth recovery test; every fallback branch is loud and its loudness is
 asserted. The family-wide six rules are in
 `petekSuite/dev-docs/designs/testing-doctrine.md`.
 
-## Planning graph + inbox
+## Central coordination
 
-The cross-library **planning graph** (served by the `contract` MCP; homed at
-`petekSuite/research/graph/research.kgl`) is the single source of truth for the
-inter-library contracts, decisions, and open questions. Reach for it on anything
-cross-cutting; contribute runtime types only (`Question` / `Decision` / `Artifact` /
-`Task`), MERGE on id (never CREATE), one node per concept, stamp `git_sha` +
-`modified_by='peteksim'`. petekSim is a **participant, not the coordinator** — the
-coordinator role is petekSuite. No direct graph access → route via the **inbox** to
-petekSuite, who curates it in. Use the inbox skills (`read-inbox` in, `notify` out —
-sign as `peteksim`); never hand-read or hand-write inbox files.
+petekSuite is the single operational control plane. It owns direct agent
+management, the cross-library planning graph, actionable todos, GitHub Actions
+operations, and releases. A petekSim task is scoped and supervised through the
+central `run-library-task` skill; the spawned owning agent edits this repository,
+runs the gates above, and reports evidence for the coordinator to record.
+
+Technical designs, benchmark records, acceptance tooling, and clean-room study
+material remain local because they describe or validate this library. Actionable
+state lives under `petekSuite/dev-docs/libraries/petekSim/`. There is no local
+skill tree, inbox, todo index, MCP configuration, Actions authority, or release
+authority.
 
 ## Commits & releases
 
 Commit format: `type: short description` (`feat`, `fix`, `docs`, `refactor`,
 `test`, `chore`). Update `CHANGELOG.md` `[Unreleased]` for user-visible changes; skip
 for internal refactors, CI, test-only, or formatting. **Pushing requires explicit,
-in-the-moment approval** — except that invoking the `release` skill is push
-authorization for that one release run. The version source of truth is the root
-`Cargo.toml` `[workspace.package] version`; all workspace members bump in lockstep.
-Full conventions in `CLAUDE.md`.
+in-the-moment approval.** Invoking petekSuite's central `release` skill grants
+push/tag/publish authority only for that release run. The version source of truth
+is the root `Cargo.toml` `[workspace.package] version`; all workspace members bump
+in lockstep. Full conventions in `CLAUDE.md`.
