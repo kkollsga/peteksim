@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-07-10
+
 ### Changed
 
 - CI now builds the abi3 wheel once and validates that exact artifact on Python
