@@ -732,7 +732,7 @@ dependencies = [
 
 [[package]]
 name = "peteksim"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "base64",
  "petekio",
@@ -1241,7 +1241,7 @@ dependencies = [
 
 [[package]]
 name = "srs-py"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "peteksim",
  "pyo3",

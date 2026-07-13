@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-07-13
+
+### Changed
+
+- Contributor guidance now describes repository-local research references as
+  internal study material; runtime behaviour and public APIs are unchanged.
+
 ## [0.1.11] - 2026-07-10
 
 ### Changed
