@@ -392,19 +392,35 @@ def spill():
             "requires the exact-source viewer-schema-acceptance wheel; "
             "see CONTRIBUTING.md"
         )
-    artifact = helper()
+    # Rust's SpillNotice writes directly to fd 2. Capture the descriptor—not
+    # sys.stderr—so this asserts the engine's actual loud mode switch rather than
+    # a Python/Rust reconstruction of its wording.
+    read_fd, write_fd = os.pipe()
+    saved_stderr = os.dup(2)
+    try:
+        os.dup2(write_fd, 2)
+        os.close(write_fd)
+        artifact = helper()
+    finally:
+        os.dup2(saved_stderr, 2)
+        os.close(saved_stderr)
+    try:
+        stderr = os.read(read_fd, 64 * 1024).decode("utf-8", errors="replace")
+    finally:
+        os.close(read_fd)
     assert artifact["is_spilled"] is True
     assert artifact["mode"] == "out-of-core"
     assert artifact["budget_bytes"] == 1_024
     assert artifact["estimate_bytes"] > artifact["budget_bytes"]
+    artifact["stderr"] = stderr
     return artifact
 
 
 @acceptance_spill
 def test_spill_emits_loud_mode_switch_warning(spill):
-    assert "OUT-OF-CORE mode" in spill["notice"]
-    assert "exceeds budget" in spill["notice"]
-    assert "spilling geometry + cubes" in spill["notice"]
+    assert "OUT-OF-CORE mode" in spill["stderr"]
+    assert "exceeds budget" in spill["stderr"]
+    assert "spilling geometry + cubes" in spill["stderr"]
     assert spill["cells"] == 24 * 24 * 10
 
 

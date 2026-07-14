@@ -660,22 +660,10 @@ pub fn spilled_acceptance_value() -> VResult<Value> {
     let volume = volume_envelope_value(&volume)?;
     let dims = Dims::new(NI, NJ, NK).map_err(ViewerError::from_display)?;
     let estimate_bytes = petekstatic::model::live_set_bytes(dims, N_CUBES);
-    let store_path = model
-        .spill_store_path()
-        .ok_or_else(|| ViewerError::msg("spilled model did not expose its store path"))?;
-    let notice = format!(
-        "petekstatic: OUT-OF-CORE mode — live-set estimate {} MiB exceeds budget {} MiB \
-         ({} cells); spilling geometry + cubes (f32) to {}",
-        estimate_bytes >> 20,
-        BUDGET_BYTES >> 20,
-        NI * NJ * NK,
-        store_path.display(),
-    );
 
     Ok(serde_json::json!({
         "is_spilled": true,
         "mode": "out-of-core",
-        "notice": notice,
         "budget_bytes": BUDGET_BYTES,
         "estimate_bytes": estimate_bytes,
         "cells": NI * NJ * NK,
