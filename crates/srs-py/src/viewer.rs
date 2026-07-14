@@ -602,11 +602,311 @@ pub fn json_to_py(py: Python<'_>, v: &Value) -> PyResult<Py<PyAny>> {
     })
 }
 
+/// Build the Python acceptance artifact from a genuinely spilled StaticModel.
+///
+/// This exists only in the coordinator's exact-source acceptance wheel.  It is
+/// deliberately absent from released-floor builds and is not production API.
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+pub fn spilled_acceptance_value() -> VResult<Value> {
+    use petekstatic::grid::Dims;
+    use petekstatic::gridder::{Conformity, SolveOpts};
+    use petekstatic::model::{BuildOpts, ConstantPriors, MemoryBudget, StaticModelBuilder};
+
+    const NI: usize = 24;
+    const NJ: usize = 24;
+    const NK: usize = 10;
+    const BUDGET_BYTES: u64 = 1_024;
+    const N_CUBES: usize = 3;
+
+    let opts = BuildOpts {
+        area_m2: 1_000_000.0,
+        gross_height_m: 40.0,
+        nk: NK,
+        conformity: Conformity::Proportional,
+        solve_opts: SolveOpts::default(),
+        priors: ConstantPriors {
+            porosity: 0.22,
+            net_to_gross: 0.71,
+            water_saturation: 0.31,
+        },
+    };
+    let model = StaticModelBuilder::flat(NI, NJ, 2_000.0, 2_030.0, opts)
+        .map_err(ViewerError::from_display)?
+        .with_memory_budget(MemoryBudget::bytes(BUDGET_BYTES))
+        .build()
+        .map_err(ViewerError::from_display)?;
+    if !model.is_spilled() {
+        return Err(ViewerError::msg(
+            "1 KiB acceptance budget did not select out-of-core mode",
+        ));
+    }
+
+    let properties = vec![DEFAULT_VIEW_PROPERTY.to_string()];
+    let map = build_map(&model, &properties, None)?;
+    let line = vec![
+        [map.frame.origin_x, map.frame.origin_y],
+        [
+            map.frame.origin_x + (map.frame.ncol - 1) as f64 * map.frame.spacing_x,
+            map.frame.origin_y + (map.frame.nrow - 1) as f64 * map.frame.spacing_y,
+        ],
+    ];
+    let section = build_section(
+        &model,
+        &SectionRequest::Line(line),
+        Some(DEFAULT_VIEW_PROPERTY),
+        &[],
+    )?;
+    let volume = build_volume(&model, DEFAULT_VIEW_PROPERTY)?;
+    let volume = volume_envelope_value(&volume)?;
+    let dims = Dims::new(NI, NJ, NK).map_err(ViewerError::from_display)?;
+    let estimate_bytes = petekstatic::model::live_set_bytes(dims, N_CUBES);
+    let store_path = model
+        .spill_store_path()
+        .ok_or_else(|| ViewerError::msg("spilled model did not expose its store path"))?;
+    let notice = format!(
+        "petekstatic: OUT-OF-CORE mode — live-set estimate {} MiB exceeds budget {} MiB \
+         ({} cells); spilling geometry + cubes (f32) to {}",
+        estimate_bytes >> 20,
+        BUDGET_BYTES >> 20,
+        NI * NJ * NK,
+        store_path.display(),
+    );
+
+    Ok(serde_json::json!({
+        "is_spilled": true,
+        "mode": "out-of-core",
+        "notice": notice,
+        "budget_bytes": BUDGET_BYTES,
+        "estimate_bytes": estimate_bytes,
+        "cells": NI * NJ * NK,
+        "map": map,
+        "section": section,
+        "volume": volume,
+    }))
+}
+
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+fn acceptance_stack() -> petekstatic::model::HorizonStack {
+    use petekstatic::gridder::Conformity;
+    use petekstatic::model::{HorizonSource, StackHorizon, StackZone};
+    use petekstatic::wireframe::{Contact, ContactKind, GriddedDepth, Hardness};
+
+    const N: usize = 11;
+    let surface = |depths: Vec<f64>| GriddedDepth {
+        ncol: N,
+        nrow: N,
+        depth_m: depths,
+        is_control: vec![true; N * N],
+    };
+    let mut h0 = Vec::with_capacity(N * N);
+    let mut h1 = Vec::with_capacity(N * N);
+    let mut h2 = Vec::with_capacity(N * N);
+    let mut h3 = Vec::with_capacity(N * N);
+    for j in 0..N {
+        for i in 0..N {
+            let top = 5_000.0 + 0.5 * i as f64 + 0.25 * j as f64;
+            let mid = top + 30.0 + 1.5 * i as f64;
+            let pinch = if i >= 8 {
+                0.0
+            } else {
+                24.0 * (1.0 - i as f64 / 8.0)
+            };
+            h0.push(top);
+            h1.push(mid);
+            h2.push(mid + pinch);
+            h3.push(mid + 90.0);
+        }
+    }
+    let contact = |kind, depth_m| Contact {
+        kind,
+        depth_m,
+        hardness: Hardness::Hard,
+    };
+    petekstatic::model::HorizonStack {
+        horizons: vec![
+            StackHorizon {
+                name: "H0".into(),
+                source: HorizonSource::Mapped(surface(h0)),
+            },
+            StackHorizon {
+                name: "H1".into(),
+                source: HorizonSource::Mapped(surface(h1)),
+            },
+            StackHorizon {
+                name: "H2".into(),
+                source: HorizonSource::Mapped(surface(h2)),
+            },
+            StackHorizon {
+                name: "H3".into(),
+                source: HorizonSource::Mapped(surface(h3)),
+            },
+        ],
+        zone_layers: vec![
+            StackZone::new("CONTACTLESS", Conformity::Proportional, 3, Vec::new()),
+            StackZone::new(
+                "SINGLE",
+                Conformity::Proportional,
+                3,
+                vec![contact(ContactKind::Owc, 5_055.0)],
+            ),
+            StackZone::new(
+                "TWO_CONTACT",
+                Conformity::Proportional,
+                4,
+                vec![
+                    contact(ContactKind::Goc, 5_075.0),
+                    contact(ContactKind::Owc, 5_105.0),
+                ],
+            ),
+        ],
+    }
+}
+
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+fn acceptance_opts() -> petekstatic::model::BuildOpts {
+    use petekstatic::gridder::{Conformity, SolveOpts};
+    use petekstatic::model::{BuildOpts, ConstantPriors};
+
+    BuildOpts {
+        area_m2: 62_500.0,
+        gross_height_m: 120.0,
+        nk: 10,
+        conformity: Conformity::Proportional,
+        solve_opts: SolveOpts::default(),
+        priors: ConstantPriors {
+            porosity: 0.22,
+            net_to_gross: 0.71,
+            water_saturation: 0.31,
+        },
+    }
+}
+
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+fn acceptance_ties() -> Vec<petekstatic::model::WellTie> {
+    use petekstatic::model::{Georef, WellTie};
+
+    let georef = Georef::oriented(510_000.0, 6_710_000.0, 25.0, 25.0, 30.0, true)
+        .expect("fixed acceptance georef");
+    let (x, y) = georef.intrinsic_to_world(2.0, 5.0);
+    vec![WellTie::new("SYNTH-01", x, y, 2, 5)
+        .with_top("H1", 5_037.25)
+        .with_top("H2", 5_055.25)]
+}
+
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+fn acceptance_model(inputs_ref: &str, sugar_cube: bool) -> VResult<StaticModel> {
+    use petekstatic::model::StaticModelBuilder;
+
+    StaticModelBuilder::from_horizon_stack(acceptance_stack(), acceptance_opts())
+        .map_err(ViewerError::from_display)?
+        .with_oriented_georef(510_000.0, 6_710_000.0, 25.0, 25.0, 30.0, true)
+        .with_inputs_ref(inputs_ref)
+        .with_collapse_below_m(0.5)
+        .with_sugar_cube(sugar_cube)
+        .with_well_ties(acceptance_ties())
+        .build()
+        .map_err(ViewerError::from_display)
+}
+
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+fn zoned_value(zoned: &petekstatic::model::ZonedInPlace) -> Value {
+    let zones: Vec<Value> = zoned
+        .zones
+        .iter()
+        .map(|zone| {
+            serde_json::json!({
+                "name": zone.zone,
+                "grv_m3": zone.in_place.grv_m3,
+                "hcpv_m3": zone.in_place.hcpv_m3,
+                "has_gas_leg": zone.in_place.gas.is_some(),
+                "has_oil_leg": zone.in_place.oil.is_some(),
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "zones": zones,
+        "total": {
+            "grv_m3": zoned.total.grv_m3,
+            "hcpv_m3": zoned.total.hcpv_m3,
+            "has_gas_leg": zoned.total.gas.is_some(),
+            "has_oil_leg": zoned.total.oil.is_some(),
+        }
+    })
+}
+
+/// One coherent exact-source model lineage for Python's migrated R6 cases.
+///
+/// `inputs_ref` is supplied from the already-imported petekIO synthetic project.
+/// The current public Python workflow cannot lower that project into this typed
+/// Rust StaticModel, so the reference is explicit provenance, not a claim that
+/// the model builder consumed the Python object.
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+pub fn viewer_acceptance_value(inputs_ref: &str) -> VResult<Value> {
+    use petekstatic::model::{RealizationDraw, StaticModelTemplate};
+
+    let model = acceptance_model(inputs_ref, false)?;
+    let sugar = acceptance_model(inputs_ref, true)?;
+    let properties: Vec<String> = model
+        .property_names()
+        .iter()
+        .map(|name| (*name).to_string())
+        .collect();
+    let map = build_map(&model, &properties, None)?;
+    let frame = map.frame;
+    let a = frame.intrinsic_to_world(0.25, 5.0);
+    let b = frame.intrinsic_to_world(9.75, 5.0);
+    let line = vec![[a.0, a.1], [b.0, b.1]];
+    let trajectory = vec![[a.0, a.1, 5_010.0], [b.0, b.1, 5_130.0]];
+    let well = WellTrack::new("SYNTH-01".into(), trajectory);
+    let payload = build_payload(
+        &model,
+        "exact-static",
+        Some(DEFAULT_VIEW_PROPERTY),
+        std::slice::from_ref(&well),
+        std::slice::from_ref(&line),
+        true,
+        None,
+        Vec::new(),
+        None,
+    )?;
+    let sugar_section = build_section(
+        &sugar,
+        &SectionRequest::Line(line),
+        Some(DEFAULT_VIEW_PROPERTY),
+        &[],
+    )?;
+
+    let deterministic = model
+        .in_place_by_zone()
+        .map_err(ViewerError::from_display)?;
+    let draw = RealizationDraw::new(62_500.0, 120.0, 0.0, 0.22, 0.71, 0.31, 1);
+    let mut template =
+        StaticModelTemplate::from_horizon_stack(acceptance_stack(), acceptance_opts())
+            .map_err(ViewerError::from_display)?
+            .with_oriented_georef(510_000.0, 6_710_000.0, 25.0, 25.0, 30.0, true)
+            .with_inputs_ref(inputs_ref)
+            .with_collapse_below_m(0.5)
+            .with_well_ties(acceptance_ties())
+            .map_err(ViewerError::from_display)?;
+    let realized = template.realize(&draw).map_err(ViewerError::from_display)?;
+    let realized = realized
+        .in_place_by_zone()
+        .map_err(ViewerError::from_display)?;
+
+    Ok(serde_json::json!({
+        "inputs_ref": inputs_ref,
+        "payload": payload,
+        "sugar_section": sugar_section,
+        "deterministic_zones": zoned_value(&deterministic),
+        "realized_zones": zoned_value(&realized),
+    }))
+}
+
 // This suite targets the next unreleased family seam and is enabled only by the
 // coordinator's exact-SHA acceptance command (`PETEK_VIEW_SCHEMA_V6=1 cargo
 // test ...`). Keeping it outside ordinary `--all-features` lets the
 // released dependency floors remain testable until the coordinated release.
-#[cfg(all(test, petek_view_schema_v6))]
+#[cfg(all(test, petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
 mod tests {
     use super::*;
     use petekio::foundation::GridGeometry;

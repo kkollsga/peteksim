@@ -675,11 +675,31 @@ fn live_set_bytes(ni: usize, nj: usize, nk: usize, n_cubes: usize) -> PyResult<u
     Ok(peteksim::live_set_bytes(dims, n_cubes))
 }
 
+/// Test-only bridge for the exact-source schema-v6 spill acceptance leg.
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+#[pyfunction]
+fn _spilled_viewer_acceptance(py: Python<'_>) -> PyResult<Py<PyAny>> {
+    let artifact = py.detach(viewer::spilled_acceptance_value)?;
+    viewer::json_to_py(py, &artifact)
+}
+
+/// Test-only coherent viewer artifact for the exact-source R6 acceptance leg.
+#[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+#[pyfunction]
+fn _viewer_acceptance(py: Python<'_>, inputs_ref: &str) -> PyResult<Py<PyAny>> {
+    let artifact = py.detach(|| viewer::viewer_acceptance_value(inputs_ref))?;
+    viewer::json_to_py(py, &artifact)
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add_function(wrap_pyfunction!(run_box_model, m)?)?;
     m.add_function(wrap_pyfunction!(live_set_bytes, m)?)?;
+    #[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+    m.add_function(wrap_pyfunction!(_spilled_viewer_acceptance, m)?)?;
+    #[cfg(all(petek_view_schema_v6, feature = "viewer-schema-acceptance"))]
+    m.add_function(wrap_pyfunction!(_viewer_acceptance, m)?)?;
     m.add_class::<PyModelResult>()?;
     m.add_class::<PyModel>()?;
     m.add_class::<PyRefined>()?;
