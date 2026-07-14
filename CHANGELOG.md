@@ -6,6 +6,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-07-14
+
+### Changed
+
+- Added executable acceptance for the updated viewer design schema: coherent
+  typed map, volume, polyline/AlongBore section, orientation, well-tie, contact,
+  pinch-out, sugar-cube, and zero-spread realization artifacts now round-trip
+  through petekSim's save/serve delivery seam.
+- Added an exact registry-seam acceptance mode that verifies real out-of-core
+  map/section/volume exports and captures petekStatic's actual spill notice.
+- Raised release-train dependency floors to `petektools 0.2.15`,
+  `petekio 0.3.15`, and `petekstatic 0.1.13` for Rust and the Python wheel.
+
 ## [0.1.12] - 2026-07-13
 
 ### Changed
@@ -273,6 +286,7 @@ a default.
 - petekSim is licensed under the **Business Source License 1.1** (BUSL-1.1); each
   released version converts to Apache-2.0 four years after publication. See `LICENSE`.
 
-[Unreleased]: https://github.com/kkollsga/peteksim/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/kkollsga/peteksim/compare/v0.1.13...HEAD
+[0.1.13]: https://github.com/kkollsga/peteksim/compare/v0.1.12...v0.1.13
 [0.1.1]: https://github.com/kkollsga/peteksim/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/kkollsga/peteksim/releases/tag/v0.1.0

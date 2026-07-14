@@ -23,11 +23,11 @@ dynamic = ["version"]
 # The viewer is petekTools' horizontal unit (owner ruling
 # decision_viewer_home_petektools); peteksim consumes it Python-side, DAG-downward.
 # Publish batch: pinned to the petektools 0.2 release line on PyPI.
-# Floor 0.2.7: current release-train toolkit floor, including point-only 2-D
-# rendering and edge-clipped geometry grids.
+# Floor 0.2.15: current release-train toolkit floor, including the updated
+# viewer-design-schema renderer and delivery contract.
 # petekstatic owns the canonical static property workflow; peteksim re-exports a
 # narrow compatibility shim to those APIs instead of carrying a second workflow.
-dependencies = ["petektools>=0.2.7", "petekio>=0.3.9", "petekstatic>=0.1.11"]
+dependencies = ["petektools>=0.2.15", "petekio>=0.3.15", "petekstatic>=0.1.13"]
 
 [project.urls]
 # The petekSuite site is the canonical docs home for the whole family.
