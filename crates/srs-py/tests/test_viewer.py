@@ -112,7 +112,7 @@ def test_map_bundle_shape(box):
 def test_payload_metadata(box):
     p = _payload(box)
     # Top-level payload contract version — 2 since the additive `charts` bundle
-    # (the per-bundle volume/map/section schema_version stays 1, checked above).
+    # (per-bundle versions remain independently owned by petekStatic).
     assert p["schema_version"] == 2
     assert p["kind"] == "box"
     assert p["property"] == "PORO"
@@ -165,7 +165,12 @@ def test_server_smoke(box):
         q = urllib.parse.urlencode({"line": json.dumps([[x0, y0], [x1, y1]])})
         with urllib.request.urlopen(url + "/section?" + q, timeout=5) as r:
             sec = json.loads(r.read())
-            assert set(sec) == SECTION_KEYS, set(sec)
+            # Schema v6 adds the exact Map frame to sections; released pre-v6
+            # producers omit it. Both shapes remain accepted during the rolling
+            # suite upgrade, and the additive frame must be byte-identical.
+            assert set(sec) in (SECTION_KEYS, SECTION_KEYS | {"frame"}), set(sec)
+            if "frame" in sec:
+                assert sec["frame"] == f
             assert sec["columns"], "fence produced no columns"
     finally:
         httpd.shutdown()
