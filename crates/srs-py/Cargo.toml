@@ -23,3 +23,10 @@ pyo3 = { version = "0.29", features = ["extension-module", "abi3-py310"] }
 peteksim.workspace = true
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[dev-dependencies]
+# Acceptance-only seam inputs: author the oriented lattice in petekIO's
+# vocabulary, build the model in petekStatic, then prove this binding crate
+# forwards both bundles without altering their schema-v6 frame.
+petekio.workspace = true
+petekstatic.workspace = true

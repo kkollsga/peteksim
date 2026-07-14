@@ -49,8 +49,8 @@ pub type VResult<T> = Result<T, ViewerError>;
 
 /// The top-level render-payload contract version (petekTools viewer SCHEMA.md).
 /// Bumped to **2** when the additive `charts` bundle landed; the per-bundle
-/// (volume/map/section) `SCHEMA_VERSION` is petekStatic's cross-repo contract and
-/// stays at 1.
+/// (volume/map/section) versions are petekStatic's cross-repo contract and are
+/// forwarded independently without being rewritten here.
 pub const PAYLOAD_SCHEMA_VERSION: u32 = 2;
 
 /// One well↔horizon surface-tie residual carried into the wells payload (viewer
@@ -600,4 +600,220 @@ pub fn json_to_py(py: Python<'_>, v: &Value) -> PyResult<Py<PyAny>> {
             dict.into_any().unbind()
         }
     })
+}
+
+// This suite targets the next unreleased family seam and is enabled only by the
+// coordinator's exact-SHA acceptance command (`PETEK_VIEW_SCHEMA_V6=1 cargo
+// test ...`). Keeping it outside ordinary `--all-features` lets the
+// released dependency floors remain testable until the coordinated release.
+#[cfg(all(test, petek_view_schema_v6))]
+mod tests {
+    use super::*;
+    use petekio::foundation::GridGeometry;
+    use petekstatic::gridder::{Conformity, SolveOpts};
+    use petekstatic::model::{BuildOpts, ConstantPriors, Georef, MemoryBudget, StaticModelBuilder};
+
+    fn oriented_model() -> (StaticModel, GridGeometry) {
+        // The frame is authored in the DATA-layer vocabulary, then converted at
+        // the composition root. This is the current seam; petekSim does not own
+        // project loading or expose a replacement orientation API.
+        let frame = GridGeometry {
+            xori: 510_000.0,
+            yori: 6_710_000.0,
+            xinc: 25.0,
+            yinc: 25.0,
+            ncol: 5,
+            nrow: 5,
+            rotation_deg: 30.0,
+            yflip: true,
+        };
+        let georef = Georef::oriented(
+            frame.xori,
+            frame.yori,
+            frame.xinc,
+            frame.yinc,
+            frame.rotation_deg,
+            frame.yflip,
+        )
+        .expect("finite petekIO frame must convert to petekStatic georef");
+        let opts = BuildOpts {
+            area_m2: 10_000.0,
+            gross_height_m: 40.0,
+            nk: 4,
+            conformity: Conformity::Proportional,
+            solve_opts: SolveOpts::default(),
+            priors: ConstantPriors {
+                porosity: 0.22,
+                net_to_gross: 0.71,
+                water_saturation: 0.31,
+            },
+        };
+        let model = StaticModelBuilder::flat(4, 4, 2_000.0, 2_030.0, opts)
+            .expect("synthetic flat builder")
+            .with_oriented_georef(
+                georef.origin_x,
+                georef.origin_y,
+                georef.spacing_x,
+                georef.spacing_y,
+                georef.rotation_deg,
+                georef.yflip,
+            )
+            .build()
+            .expect("synthetic oriented model");
+        (model, frame)
+    }
+
+    fn spilled_model() -> StaticModel {
+        let opts = BuildOpts {
+            area_m2: 1_000_000.0,
+            gross_height_m: 40.0,
+            nk: 10,
+            conformity: Conformity::Proportional,
+            solve_opts: SolveOpts::default(),
+            priors: ConstantPriors {
+                porosity: 0.22,
+                net_to_gross: 0.71,
+                water_saturation: 0.31,
+            },
+        };
+        let model = StaticModelBuilder::flat(24, 24, 2_000.0, 2_030.0, opts)
+            .expect("synthetic spill builder")
+            .with_memory_budget(MemoryBudget::bytes(1_024))
+            .build()
+            .expect("forced-spill model");
+        assert!(model.is_spilled(), "tiny budget must select spilled mode");
+        model
+    }
+
+    #[test]
+    fn schema_v6_map_and_section_are_forwarded_byte_for_byte() {
+        let (model, frame) = oriented_model();
+        let properties = vec![DEFAULT_VIEW_PROPERTY.to_string()];
+        let spec = MapSpec::new().property(DEFAULT_VIEW_PROPERTY);
+        let direct_map = model.map_bundle(&spec).expect("petekStatic map");
+        let forwarded_map = build_map(&model, &properties, None).expect("petekSim map");
+        assert_eq!(forwarded_map, direct_map);
+        assert_eq!(forwarded_map.schema_version, 6);
+        assert_eq!(forwarded_map.frame.rotation_deg, 30.0);
+        assert!(forwarded_map.frame.yflip);
+
+        let a = frame.node_xy(0, 2);
+        let b = frame.node_xy(4, 2);
+        let line = vec![[a.0, a.1], [b.0, b.1]];
+        let direct_section = model
+            .intersection_bundle(
+                &SectionSpec::Polyline(line.clone()),
+                Some(DEFAULT_VIEW_PROPERTY),
+            )
+            .expect("petekStatic section");
+        let forwarded_section = build_section(
+            &model,
+            &SectionRequest::Line(line.clone()),
+            Some(DEFAULT_VIEW_PROPERTY),
+            &[],
+        )
+        .expect("petekSim section");
+        assert_eq!(forwarded_section, direct_section);
+        assert_eq!(forwarded_section.schema_version, 6);
+        assert_eq!(forwarded_section.frame, Some(forwarded_map.frame));
+
+        // The full save/serve document must embed the exact same typed bundles;
+        // payload composition may add siblings, never rewrite the Static seam.
+        let payload = build_payload(
+            &model,
+            "static",
+            Some(DEFAULT_VIEW_PROPERTY),
+            &[],
+            &[line],
+            false,
+            None,
+            vec![],
+            None,
+        )
+        .expect("petekSim viewer payload");
+        let all_properties = model.property_names();
+        let direct_payload_map = model
+            .map_bundle(&all_properties.iter().fold(MapSpec::new(), |spec, name| {
+                spec.property((*name).to_string())
+            }))
+            .expect("petekStatic all-property map");
+        assert_eq!(payload.map, direct_payload_map);
+        assert_eq!(payload.sections, vec![direct_section]);
+        let encoded = to_json(&payload).expect("payload JSON");
+        let decoded: Value = serde_json::from_str(&encoded).expect("payload JSON parses");
+        assert_eq!(decoded["map"]["schema_version"], 6);
+        assert_eq!(decoded["map"]["frame"]["rotation_deg"], 30.0);
+        assert_eq!(decoded["map"]["frame"]["yflip"], true);
+        assert_eq!(decoded["sections"][0]["schema_version"], 6);
+        assert_eq!(decoded["sections"][0]["frame"], decoded["map"]["frame"]);
+    }
+
+    #[test]
+    fn zero_orientation_retains_the_pre_v6_frame_shape() {
+        let opts = BuildOpts {
+            area_m2: 10_000.0,
+            gross_height_m: 40.0,
+            nk: 2,
+            conformity: Conformity::Proportional,
+            solve_opts: SolveOpts::default(),
+            priors: ConstantPriors {
+                porosity: 0.22,
+                net_to_gross: 0.71,
+                water_saturation: 0.31,
+            },
+        };
+        let model = StaticModelBuilder::flat(2, 2, 2_000.0, 2_030.0, opts)
+            .expect("synthetic flat builder")
+            .build()
+            .expect("synthetic zero-orientation model");
+        let map = build_map(&model, &[DEFAULT_VIEW_PROPERTY.to_string()], None)
+            .expect("zero-orientation map");
+        let json = to_value(&map).expect("map JSON");
+        assert_eq!(json["schema_version"], 6);
+        assert!(json["frame"].get("rotation_deg").is_none());
+        assert!(json["frame"].get("yflip").is_none());
+    }
+
+    #[test]
+    fn forced_spill_mode_is_selected_loudly() {
+        assert!(spilled_model().is_spilled());
+    }
+
+    #[test]
+    fn spilled_volume_is_forwarded_as_a_viewer_envelope() {
+        let volume = build_volume(&spilled_model(), DEFAULT_VIEW_PROPERTY)
+            .expect("spilled volume materializes");
+        let envelope = volume_envelope_value(&volume).expect("spilled volume envelope");
+        assert!(envelope["triangle_count"].as_u64().unwrap_or(0) > 0);
+        assert_eq!(envelope["encoding"], "base64");
+    }
+
+    #[test]
+    fn spilled_map_is_forwarded_without_a_placeholder_frame() {
+        let map = build_map(&spilled_model(), &[DEFAULT_VIEW_PROPERTY.to_string()], None)
+            .expect("spilled map materializes");
+        assert!(map.frame.ncol > 1 && map.frame.nrow > 1);
+        assert!(!map.zone_averages.is_empty());
+    }
+
+    #[test]
+    fn spilled_section_is_forwarded_with_real_columns() {
+        let model = spilled_model();
+        let frame = build_map(&model, &[], None).expect("spilled frame").frame;
+        let line = vec![
+            [frame.origin_x, frame.origin_y],
+            [
+                frame.origin_x + (frame.ncol - 1) as f64 * frame.spacing_x,
+                frame.origin_y + (frame.nrow - 1) as f64 * frame.spacing_y,
+            ],
+        ];
+        let section = build_section(
+            &model,
+            &SectionRequest::Line(line),
+            Some(DEFAULT_VIEW_PROPERTY),
+            &[],
+        )
+        .expect("spilled section materializes");
+        assert!(section.columns.len() > 1);
+    }
 }

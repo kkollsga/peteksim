@@ -1243,7 +1243,9 @@ dependencies = [
 name = "srs-py"
 version = "0.1.12"
 dependencies = [
+ "petekio",
  "peteksim",
+ "petekstatic",
  "pyo3",
  "serde",
  "serde_json",

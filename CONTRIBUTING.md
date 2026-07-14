@@ -68,10 +68,11 @@ VIRTUAL_ENV="$PWD/.venv-srs" .venv-srs/bin/maturin develop -m crates/srs-py/Carg
 ## The acceptance gate (R6)
 
 `crates/srs-py/tests/test_acceptance.py` is the **end-to-end acceptance suite**
-(testing-doctrine R6, the round-trip rule): the whole chain — generated tree →
-`Project.load` → framework → `build_grid` → upscale/propagate → multi-zone stack +
-well ties → `grid.model` → zoned MC → every bundle kind → `save_view` + served
-session — run on the canonical synthetic asset, with the payload invariants asserted
+(testing-doctrine R6, the round-trip rule): the current ownership chain — generated
+tree → `petekio.Project.import_data` → `petekstatic.Grid.from_project` and typed
+viewer bundles → petekSim product payload → `save_view` + served session — runs on
+the canonical synthetic asset without recreating the removed `peteksim.Project`
+facade.  It asserts the payload invariants
 (section `layer_tops_l != layer_tops_r` on dipping cells, non-empty volume shells,
 `outline == frame` extent, `wells[].ties` populated, `horizon_traces` present +
 pinch-out NaN-gapped) and the planted truths recovered (rho, per-zone net PORO,
@@ -87,13 +88,32 @@ make acceptance-gate   # just the fast gate (assumes a fresh wheel), ~4 s on the
 ```
 
 Three legs (pytest markers): `acceptance` (the fast per-wave gate, target < ~5 min;
-~4 s at the default size), `acceptance_spill` (opt-in — forces the out-of-core path
-via `grid.model(..., run=ps.Run(memory_budget=<bytes>))`), and `acceptance_render`
+(~1 s at the default size), `acceptance_spill` (the Python seam assertions paired
+with the opt-in Rust forced-budget spill tests below), and `acceptance_render`
 (opt-in — a headless-Chromium Playwright round-trip of the `save_view` export; skips
 cleanly when node/playwright/chromium are absent).
 
 This is the standing gate the petekSuite coordinator requires from the directly
 spawned petekSim agent before stamping a cross-repo task.
+
+### Unreleased viewer-seam acceptance
+
+During a coordinated rolling upgrade, the sibling libraries can expose a schema
+that is newer than petekSim's published dependency floors.  The opt-in
+``viewer::tests`` module checks that exact source seam without restoring a
+petekSim project-construction API or changing release floors:
+
+```sh
+PETEK_VIEW_SCHEMA_V6=1 cargo test -p srs-py viewer::tests \
+  --config 'patch.crates-io.petektools.path="../petekTools"' \
+  --config 'patch.crates-io.petekio.path="../petekIO"' \
+  --config 'patch.crates-io.petekstatic.path="../petekStatic"'
+```
+
+Resolve the lockfile to the sibling versions only for that local verification,
+then restore it before committing.  The always-on
+``test_viewer_schema_v6_delivery.py`` separately checks that save/serve glue
+preserves additive frame fields and remains compatible with zero/pre-v6 payloads.
 
 ## Testing doctrine
 
